@@ -1,0 +1,13 @@
+# Foundry
+out/
+cache/
+# manter os recibos de deploy (endereços), ignorar o resto do broadcast
+broadcast/*/dry-run/
+broadcast/**/*.json.tmp
+
+# Env / secrets
+.env
+.env.local
+
+# Node (este workspace só expõe scripts; sem node_modules próprio)
+node_modules/

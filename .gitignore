@@ -1,0 +1,19 @@
+# ───────────────────────────── SECRETS (nunca commitar) ─────────────────────────────
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# ───────────────────────────── Node / app ─────────────────────────────
+node_modules/
+dist/
+dist-server/
+*.log
+.DS_Store
+
+# ───────────────────────────── Foundry / contracts ─────────────────────────────
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+# lib/ é vendorizado de propósito (build reprodutível) — NÃO ignorar

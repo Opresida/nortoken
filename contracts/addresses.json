@@ -1,0 +1,74 @@
+{
+  "_comment": "Endereços canônicos da Uniswap V4 em Base Sepolia (chainId 84532). CONFIRMADO on-chain: o PositionManager 0x4b2c77... aponta para o PoolManager 0x05E73354... (consistência verificada via cast call poolManager()). Este é o conjunto da doc oficial da Uniswap. Existe um segundo deploy (0x7Da1D65F...) também consistente, porém é alternativo/antigo — NÃO usar.",
+  "baseSepolia": {
+    "chainId": 84532,
+    "status": "CONFIRMADO on-chain (consistência PositionManager↔PoolManager) + doc oficial Uniswap",
+    "verifiedAt": "via cast call em base-sepolia",
+    "poolManager": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+    "positionManager": "0x4b2C77d209d3405f41a037Ec6c77F7F5b8e2ca80",
+    "universalRouter": "0x492E6456D9528771018DeB9E87ef7750EF184104",
+    "v4Quoter": "0x4A6513c898fe1B2d0E78d3B0e0A4a151589B1cBa",
+    "stateView": "0x571291b572ed32cE6751a2cb2486EbEe8DEfB9B4",
+    "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    "_alternativeDeployIgnore": {
+      "note": "Deploy alternativo/antigo — não usar no projeto",
+      "poolManager": "0x7Da1D65F8B249183667cdE74C5CBD46dD38AA829",
+      "positionManager": "0xcDbe7b1eD817Ef0005ECE6a3e576fbAE2EA5EAFE"
+    }
+  },
+  "nortokenDeployments": {
+    "baseSepolia_v3_ATIVO": {
+      "_comment": "TRIO v3 ATIVO (front<->back alinhado): hook com OWNER EXPLICITO + TAXA DO CLIENTE por-pool. Substitui o conjunto v2 abaixo. Deployado+verificado 2026-06-05.",
+      "MazariSwapHookV3": "0xDA4e860FFD739F8A63851E19Be1AafA5D8B480CC",
+      "MazariSwapHookV3_note": "owner = carteira de obra (sobrevive ao CREATE2 -> setAnchor/KYC funcionam; USDC-ancora ja registrado). Cobra DOIS fees no ancora: protocolo 0,2% + cliente (por-pool, setClientFee pela factory), teto total 5%. 8 testes dedicados.",
+      "MalleableLiquidityLock_v3": "0x10ee52ad60b5b8a0d6bec6F31D49a466e423e9c2",
+      "NortokenFactory_v2": "0xB6BcE4CaCF4285e64de79Bcbf5Aee69cC65c9C78",
+      "NortokenFactory_v2_note": "createPoolAndLock(...,uint16 clientFeeBps,address clientTreasury) -> chama hook.setClientFee. Construtor aponta p/ hook v3 + lock v3. 13 testes. feeEnabled OFF (testnet).",
+      "NortokenSwapRouter": "0xC97b1bc7Bc1D14b6AEfd6BeDa3580564E092BCDa",
+      "NortokenSwapRouter_note": "Lado COMPRADOR (rota Market). swapExactIn(key,zeroForOne,amountIn,minAmountOut) payable — compra ETH->token e entrega ao comprador; hook cobra protocolo+cliente no swap; refund de ETH; slippage via minAmountOut. 2 testes. Verificado.",
+      "StateView": "0x571291b572ed32cE6751a2cb2486EbEe8DEfB9B4",
+      "StateView_note": "Canonico V4 — UI le getSlot0(poolId) p/ preco real na Market.",
+      "smokeTest_dualFee": {
+        "note": "E2E v3: createToken -> createPoolAndLock(ETH, clientFee 200bps) -> swap. Fee duplo capturado no ancora.",
+        "token": "0x60AE68C10bf1581d6D23c0B5Ebb6490ab765fdA5",
+        "clientTreasury": "0x00000000000000000000000000000000C0FfeE00",
+        "clientFeeRecebidoWei": "40000000000000 (= 0,002 ETH * 2%)",
+        "protocolFeeWei": "4000000000000 (= 0,002 ETH * 0,2%)",
+        "keeper": "0x96EB15FDf478db23B1DE4d54Ece018995C3c2113"
+      },
+      "CONSTRAINT_ETH_treasury": "Em pool com ancora ETH, o clientTreasury PRECISA conseguir receber ETH nativo. Um contrato sem receive() trava os swaps (poolManager.take reverte). EOA/multisig-pagavel OK. Validar no front.",
+      "totalTestes": "42 forge (todos verdes) + 18 do configMapper TS",
+      "configMapper_TS": "artifacts/nortoken/src/onchain/configMapper.ts (TokenConfig -> args do contrato, testado via tsx)"
+    },
+    "baseSepolia": {
+      "_comment_DEPRECATED": "Conjunto v2 abaixo SUBSTITUIDO pelo trio v3 acima (taxa do cliente + owner explicito). Mantido por historico.",
+      "NortokenERC20_NORD": "0xFA5e8D8029CB6F5fae62099722D483598423d575",
+      "MazariSwapHook": "0x9931C71e0F3295c470Ae5681aAdabC25dA1080cC",
+      "MazariSwapHook_note": "v2 — fee SEMPRE no lado-âncora (beforeSwap p/ compra + afterSwap p/ venda); 5/5 testes; verificado",
+      "MazariSwapHook_v1_deprecated": "0x140e8E79d9C1AE3D87612748AE24Cca62a2480C4 (capturava só no output)",
+      "MalleableLiquidityLock": "0x118a0be7638B6569945e4bAd2a786214c0F0a18D",
+      "MalleableLiquidityLock_note": "v2 (linha de montagem) — adiciona depositPrincipalFor payable+onlyFactory (separa dono x pagador; suporta ancora ETH nativa com refund da sobra) + setFactory(1x pelo deployer). Mantem depositPrincipal antigo como wrapper. 7/7 testes do lock + verificado. Keeper = ponto de plugue da Mazari Fi.",
+      "MalleableLiquidityLock_v1_deprecated": "0xB48D9d90f17335f189F6d5e713570947B11720ac (sem depositPrincipalFor; nao orquestravel pela factory)",
+      "NortokenFactory": "0x047F5C33294E1655a766b9ABe984140D70629525",
+      "NortokenFactory_note": "A LINHA DE MONTAGEM em 2 passos SEPARADOS: createToken (passo 1, standalone — cliente vira owner, recebe supply, registro+evento) + createPoolAndLock (passo 2 'Crie sua pool': inicia pool V4 + hook + tranca a liquidez no lock com keeper=Mazari = o passivo gerenciado). Taxa 39 USDC com flag feeEnabled OFF em testnet (codigo pronto p/ mainnet). Factory NUNCA retem fundos (provado on-chain). 11/11 testes + verificado. Construtor: (poolManager, hook v2, lock v2, USDC, treasury, mazariKeeper, 39e6, false). Pre-condicao do passo 2: cliente faz token.setExempt(lock,true) + aprova O LOCK (nao a factory).",
+      "USDC_baseSepolia": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "hook_ownership_finding": "ACHADO: o owner do MazariSwapHook v2 e o proxy CREATE2 (0x4e59b448...) por efeito do new{salt} — logo setAnchor/setPermissioned/setAttested sao INALCANCAVEIS. ETH-ancora funciona (registrado por construcao). USDC-ancora e KYC de RWA exigem um HOOK v3 com owner explicito nos constructorArgs (tarefa separada). O USDC da TAXA de emissao e independente do hook (transferFrom direto) e segue valido.",
+      "smokeTest_assemblyLine": {
+        "note": "E2E pela factory em Base Sepolia: createToken -> createPoolAndLock(ETH) -> swap. Tudo num fluxo, factory sem fundos, keeper=Mazari, fee capturado.",
+        "token": "0xDB0332d076B6cA927f5a6169ADAedcfE004FDfB2",
+        "lockId": 0,
+        "keeper": "0x96EB15FDf478db23B1DE4d54Ece018995C3c2113",
+        "principalLiquidity": "1e15",
+        "swapTx": "0xfab8209e5fedb27a73b4cb8b5aec6682030866fe2d81c030802646a8d968525c",
+        "feeCapturedWei": "4000000000000 (= 0,002 ETH * 0,2%, no anchor ETH)"
+      },
+      "deployer": "0x96EB15FDf478db23B1DE4d54Ece018995C3c2113",
+      "protocolTreasury": "0x96EB15FDf478db23B1DE4d54Ece018995C3c2113",
+      "phase": "Fase 1 (token) + Fase 2 (hook/pool/swap/fee) + Fase 3 (lock) + LINHA DE MONTAGEM (factory v1 + lock v2): deployados, verificados e provados E2E on-chain. Pendente: hook v3 (USDC-ancora/KYC) e Mazari Fi (motor do keeper).",
+      "poolModifyLiquidityTest": "0x98616EEE062DB8d0ec2f4a537Bf31fd7D4427a3e",
+      "poolSwapTest": "0xC84ba74072802B848C89D8479366101Bf8630eD6",
+      "firstSwapTx": "0x5d9df8b77c9e8994bf2e2f71768ab3aebf54490408f3bc95a9c73fc2135b13a0",
+      "firstFeeCapturedWeiNORD": "3910033923564"
+    }
+  }
+}

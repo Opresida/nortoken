@@ -1,0 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,800;1,900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-amazon-dark: #010f11;
+  --color-amazon-deep: #02181a;
+  --color-amazon-forest: #032b2e;
+  --color-amazon-medium: #054145;
+  --color-amazon-green: #10b981;
+  --color-amazon-light: #06b6d4;
+  --color-amazon-neon: #a7f3d0;
+  
+  --color-aqua-blue: #06b6d4;
+  --color-aqua-dark: #010f11;
+  
+  --color-petroleum-dark: #02181a;
+  --color-petroleum-deep: #032c2e;
+  --color-petroleum-card: rgba(255, 255, 255, 0.05);
+  --color-petroleum-light: #06b6d4;
+  --color-petroleum-accent: #10b981;
+}
+
+/* Artistic Flair Theme Utilities */
+.artistic-heading {
+  font-family: "Inter", sans-serif;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+}
+
+.artistic-subheading {
+  font-family: "Inter", sans-serif;
+  font-weight: 800;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+.artistic-ticker {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+/* Custom background animations */
+@keyframes pulse-slow {
+  0%, 100% { transform: scale(1) translate(0px, 0px); opacity: 0.35; }
+  33% { transform: scale(1.1) translate(30px, -50px); opacity: 0.5; }
+  66% { transform: scale(0.95) translate(-20px, 20px); opacity: 0.4; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 15s infinite ease-in-out;
+}
+
+@keyframes pulse-slow-reverse {
+  0%, 100% { transform: scale(1.05) translate(0px, 0px); opacity: 0.4; }
+  50% { transform: scale(0.9) translate(-40px, 40px); opacity: 0.25; }
+}
+
+.animate-pulse-slow-reverse {
+  animation: pulse-slow-reverse 18s infinite ease-in-out;
+}
+
+/* Custom glassmorphism utils */
+.glass-panel {
+  background: rgba(8, 22, 40, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(254, 254, 254, 0.08);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(12, 32, 55, 0.65);
+  border-borderColor: rgba(0, 242, 254, 0.25);
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.1);
+}
+
+.glass-input {
+  background: rgba(4, 15, 25, 0.6);
+  border: 1px solid rgba(254, 254, 254, 0.12);
+  color: #ffffff;
+  transition: all 0.25s ease;
+}
+
+.glass-input:focus {
+  border-borderColor: #00f2fe;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.15);
+  outline: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050e19;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 242, 254, 0.25);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 242, 254, 0.5);
+}
