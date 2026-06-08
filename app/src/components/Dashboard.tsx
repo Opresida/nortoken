@@ -179,8 +179,8 @@ export default function Dashboard({
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-4">
         <AlertCircle className="w-12 h-12 text-gray-400 mx-auto" />
-        <h2 className="font-display font-bold text-xl">Nenhum Ativo Registrado</h2>
-        <p className="text-sm text-gray-400">
+        <h2 className="font-display font-bold text-xl text-white">Nenhum Ativo Registrado</h2>
+        <p className="text-sm text-gray-300">
           Você ainda não lançou nenhum token. Vá para "Criar Token" para começar.
         </p>
       </div>
@@ -281,8 +281,10 @@ export default function Dashboard({
             <div>
               <div className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-1">Setup único</div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-white font-mono">US$ 3.500</span>
-                <span className="text-[10px] text-gray-500 font-mono">3.500 USDC</span>
+                <span className="flex items-center gap-1.5 text-2xl font-black text-white font-mono">
+                  <img src="/usdc.svg" alt="USDC" className="w-6 h-6" />1.500 USDC
+                </span>
+                <span className="text-[10px] text-gray-500 font-mono">on-chain</span>
               </div>
               <div className="text-[10px] text-gray-500 mt-1">
                 inclui hospedagem em <span className="text-amazon-neon font-mono">nortoken.mazaricorp.com/p/&lt;seu-slug&gt;</span>

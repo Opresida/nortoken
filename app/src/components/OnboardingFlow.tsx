@@ -61,8 +61,10 @@ export default function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowPro
         {onboardStep === 1 && (
           <div className="space-y-6">
             <div className="text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-500 to-cyan-500 mx-auto flex items-center justify-center text-white">
-                <Leaf className="w-6 h-6 text-[#02181a]" />
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-400 to-cyan-500 mx-auto flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                <svg className="w-7 h-7 text-[#02181a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
               </div>
               <h2 className="text-2xl font-black italic uppercase tracking-tight text-white">Seja Bem-vindo à Nortoken</h2>
               <p className="text-sm text-gray-300 font-light leading-relaxed">
@@ -71,13 +73,13 @@ export default function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowPro
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black tracking-wider uppercase text-gray-300 block">Insira seu Nome ou Nome da Cooperativa:</label>
+              <label className="text-[10px] font-black tracking-wider uppercase text-gray-300 block">Insira seu Nome ou o Nome do Projeto:</label>
               <input
                 id="onboard-name-input"
                 type="text"
                 value={simName}
                 onChange={(e) => setSimName(e.target.value)}
-                placeholder="Ex: Coop. de Melgaço ou Maria Silva"
+                placeholder="Ex: Meu Projeto ou Maria Silva"
                 className="w-full px-4 py-3 rounded-xl border glass-input text-sm bg-white/5 border-white/10"
               />
             </div>
@@ -86,7 +88,7 @@ export default function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowPro
               id="onboard-step1-btn"
               onClick={() => {
                 if (!simName.trim()) {
-                  alert('Insira seu nome ou nome de sua associação de bioeconomia para continuar.');
+                  alert('Insira seu nome ou o nome do projeto para continuar.');
                   return;
                 }
                 setOnboardStep(2);

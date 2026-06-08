@@ -92,7 +92,7 @@ function Shell() {
 
           <Route path="/app">
             <Dashboard
-              tokens={tokens}
+              tokens={tokens.filter((t) => !!wallet.address && t.creatorWallet === wallet.address)}
               wallet={wallet}
               onAuditRequested={handleServicePurchased}
               onMintMore={handleMintMore}
@@ -107,7 +107,11 @@ function Shell() {
           </Route>
 
           <Route path="/premium">
-            <PremiumStore tokens={tokens} wallet={wallet} onServicePurchased={handleServicePurchased} />
+            <PremiumStore
+              tokens={tokens.filter((t) => !!wallet.address && t.creatorWallet === wallet.address)}
+              wallet={wallet}
+              onServicePurchased={handleServicePurchased}
+            />
           </Route>
 
           <Route path="/admin">
@@ -140,7 +144,11 @@ function Shell() {
       <footer className="relative z-30 border-t border-white/10 bg-petroleum-dark/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
           <div className="flex items-center gap-2">
-            <Leaf className="w-4 h-4 text-amazon-neon" />
+            <span className="w-5 h-5 rounded bg-gradient-to-tr from-emerald-400 to-cyan-500 flex items-center justify-center shrink-0">
+              <svg className="w-3 h-3 text-[#02181a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+              </svg>
+            </span>
             <span className="font-mono uppercase tracking-wider">Nortoken</span>
             <span className="text-gray-600">·</span>
             <span>Rampa de lançamento Web3</span>

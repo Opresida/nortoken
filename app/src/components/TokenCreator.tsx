@@ -45,10 +45,10 @@ interface TokenCreatorProps {
 }
 
 const usd = (n: number) =>
-  n.toLocaleString('pt-BR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+  `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} USDC`;
 
 // Serviços contratáveis no criador (reaproveitam o catálogo Premium existente).
-const SERVICE_PRICE_USD = { website: 150, whitepaper: 200 };
+const SERVICE_PRICE_USD = { website: 350, whitepaper: 200 };
 const SERVICE_IDS = { website: 'brand_landing_page', whitepaper: 'whitepaper_draft' };
 
 function makeDefaultConfig(initialSupply: number): TokenConfig {
@@ -1167,6 +1167,28 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
               </p>
             </div>
 
+            {/* Banner TEMPORÁRIO — modo de teste gratuito na testnet */}
+            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/[0.07] p-4 flex items-start gap-3">
+              <span className="text-lg leading-none shrink-0">🧪</span>
+              <div className="space-y-1">
+                <div className="text-xs font-black uppercase tracking-widest text-amber-300 font-mono">Lançamento Teste · Grátis</div>
+                <p className="text-[11px] text-gray-300 leading-relaxed">
+                  Estamos em <strong className="text-white">testnet (Base Sepolia)</strong>. Os valores em USDC abaixo são o modelo de
+                  mainnet — por enquanto <strong className="text-amber-200">não cobramos nada</strong>. Você só precisa de um pouco de{' '}
+                  <strong className="text-white">ETH de teste da Base Sepolia</strong> para o gás. Pegue num faucet, conecte a carteira e lance à vontade.
+                </p>
+                <a
+                  href="https://docs.base.org/base-chain/network-information/network-faucets"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-2 px-3.5 py-2 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-200 font-bold text-[11px] uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  Pegar ETH de teste (faucet)
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* Ficha */}
               <div className="md:col-span-7 bg-white/5 p-5 rounded-2xl border border-white/5 space-y-4">
@@ -1215,28 +1237,31 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                     {quote.breakdown.map((line, k) => (
                       <div className="flex justify-between" key={k}>
                         <span className="text-gray-450 text-[11px]">{line.label}</span>
-                        <span className="font-mono text-white">{usd(line.usd)}</span>
+                        <span className={`font-mono text-white ${IS_TESTNET ? 'line-through opacity-40' : ''}`}>{usd(line.usd)}</span>
                       </div>
                     ))}
                     {config.presence.website.viaNortoken && (
                       <div className="flex justify-between">
                         <span className="text-gray-450 text-[11px]">Site oficial (Nortoken)</span>
-                        <span className="font-mono text-amber-300">{usd(SERVICE_PRICE_USD.website)}</span>
+                        <span className={`font-mono text-amber-300 ${IS_TESTNET ? 'line-through opacity-40' : ''}`}>{usd(SERVICE_PRICE_USD.website)}</span>
                       </div>
                     )}
                     {config.presence.whitepaper.viaNortoken && (
                       <div className="flex justify-between">
                         <span className="text-gray-450 text-[11px]">Whitepaper (Nortoken)</span>
-                        <span className="font-mono text-amber-300">{usd(SERVICE_PRICE_USD.whitepaper)}</span>
+                        <span className={`font-mono text-amber-300 ${IS_TESTNET ? 'line-through opacity-40' : ''}`}>{usd(SERVICE_PRICE_USD.whitepaper)}</span>
                       </div>
                     )}
                   </div>
 
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-gray-300 uppercase">Total no deploy</span>
-                    <span className="text-lg font-bold text-amazon-neon font-mono">
-                      {usd(quote.totalDeployUsd + addonsUsd)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-lg font-bold font-mono ${IS_TESTNET ? 'text-gray-500 line-through opacity-60' : 'text-amazon-neon'}`}>
+                        {usd(quote.totalDeployUsd + addonsUsd)}
+                      </span>
+                      {IS_TESTNET && <span className="text-lg font-black text-amazon-neon font-mono">Grátis</span>}
+                    </div>
                   </div>
 
                   {/* Receita recorrente */}
@@ -1245,11 +1270,11 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                       <Percent className="w-3.5 h-3.5" /> Receita recorrente Nortoken
                     </div>
                     <p className="text-[10px] text-gray-400 leading-snug">
-                      0,2% de cada transferência (compra e venda) vai para a infraestrutura Nortoken — sem nunca
-                      travar a venda do investidor.
+                      0,2% de cada swap (compra e venda na pool) vai para a infraestrutura Nortoken — o token é
+                      limpo, sem fee em transferências simples, e nunca trava a venda do investidor.
                     </p>
                     <label className="block space-y-1">
-                      <span className="text-[10px] text-gray-400">Volume mensal estimado (US$)</span>
+                      <span className="text-[10px] text-gray-400">Volume mensal estimado (USDC)</span>
                       <input
                         type="number"
                         value={estMonthlyVolumeUsd}

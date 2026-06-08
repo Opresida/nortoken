@@ -157,6 +157,21 @@ export interface PremiumService {
   category: 'assessoria' | 'branding' | 'tech' | 'legal';
   iconName: string;
   badge?: string;
+  /** Serviço ainda não disponível — exibe "Em Breve" e não permite contratar. */
+  comingSoon?: boolean;
+}
+
+/** Solicitação de serviço enviada pelo cliente (vai para o futuro dashboard ADMIN). */
+export interface ServiceRequest {
+  id: string;
+  serviceId: string;
+  serviceTitle: string;
+  tokenId: string;
+  tokenName: string;
+  wallet: string;
+  discord: string;
+  whatsapp: string;
+  createdAt: string;
 }
 
 export interface UserWallet {

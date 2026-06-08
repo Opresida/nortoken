@@ -5,19 +5,23 @@
 
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { 
-  ArrowRight, 
-  Coins, 
-  Leaf, 
-  ShieldCheck, 
-  Zap, 
-  TrendingUp, 
-  Layers, 
-  Check, 
-  Globe, 
-  Building2, 
-  HelpCircle 
+import {
+  ArrowRight,
+  Coins,
+  Leaf,
+  ShieldCheck,
+  Zap,
+  TrendingUp,
+  Layers,
+  Check,
+  Globe,
+  Building2,
+  HelpCircle,
+  Sprout,
+  HandCoins,
+  BadgeCheck
 } from 'lucide-react';
+import { BASE_SEPOLIA } from '../onchain/deployments';
 
 interface LandingPageProps {
   onStartTokenizing: () => void;
@@ -91,22 +95,12 @@ export default function LandingPage({
 
   const calc = getCalculationResult();
 
-  // Testimonials or cases
-  const caseStudies = [
-    {
-      title: "Reserva Jari Carbon",
-      location: "Vale do Jari, AP/PA",
-      desc: "Tokenizou créditos de conservação florestal em lotes de 1 Tonelada de CO2. Captou 45.000 USDC em subsídios de fomento ambiental em duas semanas.",
-      symbol: "JCARB",
-      image: "https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=200&auto=format&fit=crop"
-    },
-    {
-      title: "Coop. Agro-Extrativista de Óleos de Melgaço",
-      location: "Marajó, PA",
-      desc: "Lançou tokens utilitários para antecipação de safra de óleo de copaíba e andiroba refinados pelas mulheres locais. Expandiu vendas sem intermediários.",
-      symbol: "BIOCOP",
-      image: "https://images.unsplash.com/photo-1608797178974-15b35a61d121?q=80&w=200&auto=format&fit=crop"
-    }
+  // Contratos REAIS já deployados e verificados on-chain (lastro real, não promessa)
+  const contracts = [
+    { name: 'MazariSwapHook', role: 'Motor de fee — captura 0,2% de protocolo + a taxa do projeto, sempre no lado-âncora.', addr: BASE_SEPOLIA.hook },
+    { name: 'NortokenFactory', role: 'A linha de montagem — cria o token e a pool de liquidez em um fluxo só.', addr: BASE_SEPOLIA.factory },
+    { name: 'MalleableLiquidityLock', role: 'O cofre maleável — liquidez travada (anti-rug), range otimizável, nunca sacável.', addr: BASE_SEPOLIA.lock },
+    { name: 'NortokenSwapRouter', role: 'O roteador — compra e venda on-chain com fee transparente.', addr: BASE_SEPOLIA.swapRouter },
   ];
 
   return (
@@ -180,18 +174,16 @@ export default function LandingPage({
             {/* Quick Metrics */}
             <div className="grid grid-cols-3 gap-6 pt-6 border-t border-white/5">
               <div className="space-y-1">
-                <div className="text-2xl sm:text-3xl font-display font-extrabold text-white">4.800+</div>
-                <div className="text-xs text-gray-400 font-medium">Tokens Emitidos</div>
+                <div className="text-2xl sm:text-3xl font-display font-extrabold text-amazon-neon">39 USDC</div>
+                <div className="text-xs text-gray-400 font-medium">Custo de emissão (a partir de)</div>
               </div>
               <div className="space-y-1">
-                <div className="text-2xl sm:text-3xl font-display font-extrabold text-white">1.2M USDC</div>
-                <div className="text-xs text-gray-400 font-medium">Volume Transacionado</div>
+                <div className="text-2xl sm:text-3xl font-display font-extrabold text-white">0,2%</div>
+                <div className="text-xs text-gray-400 font-medium">Fee de protocolo (teto 5%)</div>
               </div>
               <div className="space-y-1">
-                <div className="text-2xl sm:text-3xl font-display font-extrabold flex items-center text-amazon-neon">
-                  a partir de 39 USDC
-                </div>
-                <div className="text-xs text-gray-400 font-medium">Custo de Emissão</div>
+                <div className="text-2xl sm:text-3xl font-display font-extrabold text-white">&lt; 5 min</div>
+                <div className="text-xs text-gray-400 font-medium">Do projeto ao token on-chain</div>
               </div>
             </div>
 
@@ -331,6 +323,135 @@ export default function LandingPage({
             </div>
           </div>
 
+        </div>
+      </section>
+
+      {/* ═══════════ FILOSOFIA AMAZÔNICA · IMPACTO REGENERATIVO ON-CHAIN ═══════════ */}
+      <section className="relative py-24 border-y border-white/5 overflow-hidden bg-gradient-to-b from-[#02140f] via-petroleum-deep to-[#02140f]">
+        {/* glows orgânicos */}
+        <div className="absolute top-[-10%] left-[-5%] w-[420px] h-[420px] rounded-full bg-amazon-green/20 blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-[-15%] right-[-5%] w-[480px] h-[480px] rounded-full bg-emerald-500/10 blur-[150px] pointer-events-none" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Cabeçalho */}
+          <div className="max-w-3xl mb-14">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-[10px] font-mono uppercase tracking-[0.2em] mb-6">
+              <Leaf className="w-3.5 h-3.5" /> Impacto Regenerativo · On-Chain
+            </div>
+            <h2 className="text-4xl sm:text-6xl font-black italic uppercase tracking-tighter leading-[0.9] text-white">
+              Investir na Nortoken<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-amazon-neon">é investir na floresta.</span>
+            </h2>
+            <p className="text-gray-300 text-base sm:text-lg leading-relaxed mt-6 font-light">
+              Cada lançamento, cada transação no nosso protocolo devolve uma fração à origem.
+              Não é marketing — é um compromisso <strong className="text-white">programado, automático e auditável on-chain</strong>.
+              O capital que circula aqui regenera a maior floresta do planeta.
+            </p>
+          </div>
+
+          {/* 3 pilares */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* 10% da receita */}
+            <div className="glass-panel rounded-3xl p-7 border border-white/10 relative overflow-hidden group">
+              <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-emerald-500/10 blur-2xl group-hover:bg-emerald-500/20 transition-all" />
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 mb-5">
+                <HandCoins className="w-6 h-6" />
+              </div>
+              <div className="font-display font-black text-5xl text-white leading-none">5%</div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-300 mt-2">da receita líquida → floresta</div>
+              <p className="text-sm text-gray-350 leading-relaxed mt-4">
+                A cada <strong className="text-white">1 USDC</strong> que a Nortoken ganha, <strong className="text-emerald-300">5 centavos</strong> vão
+                automaticamente para instituições verificadas que protegem a Amazônia.
+              </p>
+            </div>
+
+            {/* árvores */}
+            <div className="glass-panel rounded-3xl p-7 border border-white/10 relative overflow-hidden group">
+              <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-amazon-neon/10 blur-2xl group-hover:bg-amazon-neon/20 transition-all" />
+              <div className="w-12 h-12 rounded-2xl bg-amazon-neon/10 border border-amazon-neon/25 flex items-center justify-center text-amazon-neon mb-5">
+                <Sprout className="w-6 h-6" />
+              </div>
+              <div className="font-display font-black text-5xl text-white leading-none">1.000<span className="text-xl text-gray-500 font-mono"> USDC</span></div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-300 mt-2">= novas árvores nativas</div>
+              <p className="text-sm text-gray-350 leading-relaxed mt-4">
+                A cada <strong className="text-white">1.000 USDC</strong> de lucro líquido do protocolo, financiamos o plantio de
+                <strong className="text-emerald-300"> árvores nativas</strong> em áreas de restauração florestal.
+              </p>
+            </div>
+
+            {/* auditável */}
+            <div className="glass-panel rounded-3xl p-7 border border-white/10 relative overflow-hidden group">
+              <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-cyan-500/10 blur-2xl group-hover:bg-cyan-500/20 transition-all" />
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-center text-cyan-400 mb-5">
+                <BadgeCheck className="w-6 h-6" />
+              </div>
+              <div className="font-display font-black text-5xl text-white leading-none">100%</div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-cyan-300 mt-2">verificável on-chain</div>
+              <p className="text-sm text-gray-350 leading-relaxed mt-4">
+                Cada doação tem <strong className="text-white">hash público</strong>. Qualquer investidor — ou auditor europeu — confere o
+                impacto em tempo real, <strong className="text-cyan-300">sem confiar na nossa palavra</strong>.
+              </p>
+            </div>
+          </div>
+
+          {/* fluxo do impacto */}
+          <div className="mt-10 glass-panel rounded-3xl p-6 sm:p-8 border border-white/10">
+            <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] text-emerald-300 mb-6">
+              <ShieldCheck className="w-3.5 h-3.5" /> O caminho do impacto — transparente do início ao fim
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              {[
+                { n: '01', t: 'Transação on-chain', d: 'Você lança ou negocia na Nortoken' },
+                { n: '02', t: 'Fração da receita', d: '5% do lucro do protocolo é separado' },
+                { n: '03', t: 'Fundo Verde Nortoken', d: 'Carteira pública e rastreável' },
+                { n: '04', t: 'Instituições verificadas', d: 'Impacto real, com hash auditável' },
+              ].map((s, i) => (
+                <div key={i} className="relative">
+                  <div className="text-amazon-neon/40 font-mono text-xs font-bold">{s.n}</div>
+                  <div className="text-white font-semibold text-sm mt-1">{s.t}</div>
+                  <div className="text-[11px] text-gray-400 mt-1 leading-snug">{s.d}</div>
+                  {i < 3 && <ArrowRight className="hidden sm:block absolute top-0 -right-3 w-4 h-4 text-white/15" />}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* contador de impacto + posicionamento ESG europeu */}
+          <div className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            <div className="lg:col-span-2 rounded-3xl bg-gradient-to-tr from-[#02140f] to-petroleum-card border border-emerald-500/20 p-7">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+                <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-emerald-300">Instituições parceiras</span>
+                <span className="text-[10px] font-mono text-gray-500">números de impacto em tempo real assim que o Fundo Verde for ativado on-chain</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { logo: '/partners/idasam.png', name: 'IDASAM', desc: 'Instituto de Desenvolvimento Ambiental e Social da Amazônia', href: 'https://www.idasam.org' },
+                  { logo: '/partners/i2ta.svg', name: 'i2TA', desc: 'Instituto de Inteligência e Tecnologia Aplicada da Amazônia', href: 'https://i2ta.org.br/' },
+                ].map((p) => (
+                  <a
+                    key={p.name}
+                    href={p.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group rounded-2xl bg-white/[0.03] border border-white/10 hover:border-emerald-500/40 p-5 flex flex-col gap-3 transition-all cursor-pointer"
+                  >
+                    <img src={p.logo} alt={p.name} className="h-9 w-auto max-w-[150px] object-contain self-start opacity-90" />
+                    <p className="text-[11px] text-gray-400 leading-snug flex-1">{p.desc}</p>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider text-emerald-400 group-hover:gap-2 transition-all">
+                      Visitar site <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-3xl bg-emerald-500/[0.06] border border-emerald-500/20 p-7 flex flex-col justify-center">
+              <Globe className="w-6 h-6 text-emerald-400 mb-3" />
+              <p className="text-sm text-gray-200 leading-relaxed">
+                O capital ESG europeu exige impacto <strong className="text-white">mensurável e verificável</strong>.
+                A Nortoken entrega os dois — <strong className="text-emerald-300">on-chain, auditável, sem greenwashing</strong>.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -552,39 +673,58 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* Case studies from the Amazon */}
+      {/* Lastro real — contratos verificados on-chain */}
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center space-y-4 max-w-3xl mx-auto mb-16">
-          <span className="text-xs font-mono tracking-widest text-amazon-neon uppercase font-bold">Projetos Ativos</span>
-          <h2 className="font-display font-extrabold text-3xl sm:text-4xl">Casos de Sucesso da Bioeconomia</h2>
-          <p className="text-gray-300 text-sm">
-            Empresas comunitárias, ONGs e projetos que já estão gerando impacto financeiro real do Norte para o mundo inteiro.
+        <div className="text-center space-y-4 max-w-3xl mx-auto mb-14">
+          <span className="text-xs font-mono tracking-widest text-amazon-neon uppercase font-bold">Lastro Real · Verificável Agora</span>
+          <h2 className="font-display font-extrabold text-3xl sm:text-4xl">Não é promessa. Está on-chain.</h2>
+          <p className="text-gray-300 text-sm leading-relaxed">
+            Enquanto a maioria dos projetos vende futuro, o motor da Nortoken já está <strong className="text-white">deployado, verificado e auditável</strong> na rede Base.
+            Não confie na nossa palavra — clique e confira o código de cada contrato no explorer.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {caseStudies.map((cs, idx) => (
-            <div key={idx} className="glass-panel rounded-2xl p-6 border border-white/5 relative overflow-hidden flex flex-col sm:flex-row gap-6 items-center">
-              <img 
-                src={cs.image} 
-                alt={cs.title} 
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border border-white/5 bg-accent/40" 
-                referrerPolicy="no-referrer"
-              />
-              <div className="space-y-2 text-center sm:text-left">
-                <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start gap-1">
-                  <h4 className="font-display font-bold text-white text-base leading-tight">{cs.title}</h4>
-                  <span className="text-[10px] font-mono font-bold bg-amazon-light/10 text-amazon-neon px-2.5 py-0.5 rounded-full uppercase shrink-0">
-                    ${cs.symbol}
-                  </span>
-                </div>
-                <div className="text-[10px] font-mono text-gray-400 block">{cs.location}</div>
-                <p className="text-xs text-gray-350 leading-relaxed mt-1">
-                  {cs.desc}
-                </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-5xl mx-auto">
+          {contracts.map((c) => (
+            <a
+              key={c.name}
+              href={`${BASE_SEPOLIA.explorer}/address/${c.addr}#code`}
+              target="_blank"
+              rel="noreferrer"
+              className="group glass-panel rounded-2xl p-6 border border-white/5 hover:border-emerald-500/40 transition-all flex flex-col gap-3 cursor-pointer"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h4 className="font-display font-bold text-white text-base">{c.name}</h4>
+                <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full uppercase shrink-0">
+                  <BadgeCheck className="w-3 h-3" /> Verificado
+                </span>
               </div>
-            </div>
+              <p className="text-xs text-gray-400 leading-relaxed flex-1">{c.role}</p>
+              <div className="flex items-center justify-between border-t border-white/5 pt-3">
+                <span className="text-[10px] font-mono text-gray-500">{c.addr.slice(0, 10)}…{c.addr.slice(-6)}</span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-emerald-400 group-hover:gap-2 transition-all">
+                  Ver no BaseScan <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </a>
           ))}
+        </div>
+
+        {/* selos de prova real */}
+        <div className="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto mt-8">
+          {[
+            { icon: ShieldCheck, t: 'Honeypot-free provado (100k fuzz)' },
+            { icon: BadgeCheck, t: 'Trust Score público 0–100' },
+            { icon: Leaf, t: 'Base · testnet ativa' },
+            { icon: Check, t: 'Self-custody — você é o dono' },
+          ].map((b, i) => {
+            const Icon = b.icon;
+            return (
+              <div key={i} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/[0.03] border border-white/10 text-[11px] font-mono text-gray-300">
+                <Icon className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> {b.t}
+              </div>
+            );
+          })}
         </div>
 
         {/* Big Bottom Action Box */}
@@ -625,8 +765,10 @@ export default function LandingPage({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-6 text-gray-400 text-xs">
           
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-amazon-forest flex items-center justify-center">
-              <Leaf className="w-3.5 h-3.5 text-amazon-neon" />
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-emerald-400 to-cyan-500 flex items-center justify-center">
+              <svg className="w-4 h-4 text-[#02181a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+              </svg>
             </div>
             <span className="font-display font-semibold text-sm tracking-tight text-white">
               NORTOKEN

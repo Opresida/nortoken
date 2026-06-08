@@ -17,7 +17,7 @@ export const BR_REGIONAL_CATEGORIES = [
 ];
 
 // ─── Pacote Lançamento Enterprise ───
-// 5 etapas sequenciais com pagamento por marco. Valores totais ~US$ 54.040.
+// 5 etapas sequenciais com pagamento por marco. Valores totais ~54.040 USDC.
 // Negociáveis via consultoria especializada com a MAZARI CORP.
 export const ENTERPRISE_LAUNCH_PACKAGE: EnterpriseStage[] = [
   {
@@ -103,15 +103,6 @@ export const ENTERPRISE_TOTAL_USD = ENTERPRISE_LAUNCH_PACKAGE.reduce(
 
 export const PREMIUM_SERVICES: PremiumService[] = [
   {
-    id: 'legal_structure',
-    title: 'Estrutura Jurídica RWA',
-    priceUsd: 450,
-    description: 'Assessoria jurídica para estruturação de ativos físicos (RWA) na blockchain, incluindo atas, termos de garantia e conformidade regulatória brasileira.',
-    category: 'legal',
-    iconName: 'Scale',
-    badge: 'Mais Vendido'
-  },
-  {
     id: 'tokenomics_coaching',
     title: 'Estratégia e Tokenomics',
     priceUsd: 250,
@@ -122,24 +113,15 @@ export const PREMIUM_SERVICES: PremiumService[] = [
   {
     id: 'brand_landing_page',
     title: 'Branding e Landing Page',
-    priceUsd: 150,
+    priceUsd: 350,
     description: 'Design e desenvolvimento de uma Landing Page ultra-rápida no subdomínio da Nortoken para divulgar o seu ativo digital, com integração de buy-button.',
     category: 'branding',
     iconName: 'LayoutTemplate'
   },
   {
-    id: 'rwa_audit',
-    title: 'Auditoria e Verificação Física',
-    priceUsd: 350,
-    description: 'Parceiros locais realizam a checagem física da terra, mata, ou estoque físico e emitem um selo "Norte-Verify" auditável on-chain.',
-    category: 'legal',
-    iconName: 'ShieldCheck',
-    badge: 'Recomendado'
-  },
-  {
     id: 'community_setup',
     title: 'Criação de Comunidade & Bots',
-    priceUsd: 90,
+    priceUsd: 250,
     description: 'Configuração profissional de servidores Discord, canais Telegram e automação de alertas de transações on-chain de sua comunidade.',
     category: 'branding',
     iconName: 'Users'
@@ -151,6 +133,40 @@ export const PREMIUM_SERVICES: PremiumService[] = [
     description: 'Transformação do escopo do seu projeto em um Whitepaper limpo, objetivo, bilíngue (Português/Inglês) para atração de grants internacionais.',
     category: 'legal',
     iconName: 'FileText'
+  },
+  {
+    id: 'volume_bot',
+    title: 'Bot de Volume de Trade',
+    priceUsd: 300,
+    description: 'Bot que gera volume de negociação real e saudável na pool do seu token — dá vida ao gráfico, melhora a descoberta e atrai investidores.',
+    category: 'tech',
+    iconName: 'TrendingUp'
+  },
+  {
+    id: 'holders_bot',
+    title: 'Bot Wallet Holders',
+    priceUsd: 200,
+    description: 'Distribui seu token em múltiplas carteiras reais, elevando o número de holders e a descentralização aparente do projeto.',
+    category: 'tech',
+    iconName: 'Wallet'
+  },
+  {
+    id: 'rwa_audit',
+    title: 'Auditoria e Verificação Física',
+    priceUsd: 0,
+    description: 'Parceiros locais realizam a checagem física da terra, mata, ou estoque físico e emitem um selo "Norte-Verify" auditável on-chain.',
+    category: 'legal',
+    iconName: 'ShieldCheck',
+    comingSoon: true
+  },
+  {
+    id: 'legal_structure',
+    title: 'Estrutura Jurídica RWA',
+    priceUsd: 0,
+    description: 'Assessoria jurídica para estruturação de ativos físicos (RWA) na blockchain, incluindo atas, termos de garantia e conformidade regulatória brasileira.',
+    category: 'legal',
+    iconName: 'Scale',
+    comingSoon: true
   }
 ];
 

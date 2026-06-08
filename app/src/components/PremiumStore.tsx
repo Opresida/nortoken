@@ -23,9 +23,10 @@ import {
   Megaphone,
   MessageCircle,
   Info,
+  Wallet,
 } from 'lucide-react';
 import { ENTERPRISE_LAUNCH_PACKAGE, ENTERPRISE_TOTAL_USD, PREMIUM_SERVICES } from '../data/mockData';
-import { Token, UserWallet, EnterpriseStage } from '../types';
+import { Token, UserWallet, EnterpriseStage, PremiumService, ServiceRequest } from '../types';
 
 // ─── Mapa de cor por accent das etapas enterprise ───
 const ACCENT_STYLES: Record<EnterpriseStage['accent'], {
@@ -63,9 +64,21 @@ interface PremiumStoreProps {
 
 export default function PremiumStore({ tokens, wallet, onServicePurchased }: PremiumStoreProps) {
   const [selectedTokenId, setSelectedTokenId] = useState<string>(tokens[0]?.id || '');
-  const [activeCheckoutService, setActiveCheckoutService] = useState<any | null>(null);
+  const [activeCheckoutService, setActiveCheckoutService] = useState<PremiumService | null>(null);
+  const [form, setForm] = useState({ wallet: '', tokenId: '', discord: '', whatsapp: '' });
+  const [showThankYou, setShowThankYou] = useState(false);
 
   const selectedToken = tokens.find(t => t.id === selectedTokenId);
+
+  // Abre o formulário de solicitação de um serviço
+  const openRequest = (serv: PremiumService) => {
+    if (tokens.length === 0) {
+      alert('Crie um token antes de solicitar um serviço.');
+      return;
+    }
+    setForm({ wallet: wallet.address || '', tokenId: selectedTokenId || tokens[0].id, discord: '', whatsapp: '' });
+    setActiveCheckoutService(serv);
+  };
 
   // Maps icon names dynamically
   const getServiceIcon = (name: string) => {
@@ -82,25 +95,40 @@ export default function PremiumStore({ tokens, wallet, onServicePurchased }: Pre
         return <Users className="w-6 h-6 text-purple-400" />;
       case 'FileText':
         return <FileText className="w-6 h-6 text-teal-400" />;
+      case 'TrendingUp':
+        return <TrendingUp className="w-6 h-6 text-emerald-400" />;
+      case 'Wallet':
+        return <Wallet className="w-6 h-6 text-cyan-400" />;
       default:
         return <Sparkles className="w-6 h-6 text-amazon-neon" />;
     }
   };
 
-  const handleServiceBuySubmit = () => {
-    if (!selectedToken) {
-      alert('Por favor, efetue o deploy de ao menos um token antes de contratar assessoria.');
+  // Envia a solicitação → captura os dados (futuro dashboard ADMIN) + agradecimento
+  const handleRequestSubmit = () => {
+    if (!activeCheckoutService) return;
+    if (!form.tokenId || !form.wallet.trim() || !form.discord.trim() || !form.whatsapp.trim()) {
+      alert('Preencha todos os campos para enviar a solicitação.');
       return;
     }
-
-    if (wallet.usdcBalance < activeCheckoutService.priceUsd) {
-      alert('Saldo de USDC insuficiente na carteira. Use o faucet de teste na área Administrativa.');
-      return;
-    }
-
-    onServicePurchased(selectedToken.id, activeCheckoutService.id);
+    const tk = tokens.find(t => t.id === form.tokenId);
+    const request: ServiceRequest = {
+      id: 'req-' + activeCheckoutService.id + '-' + form.tokenId,
+      serviceId: activeCheckoutService.id,
+      serviceTitle: activeCheckoutService.title,
+      tokenId: form.tokenId,
+      tokenName: tk?.name || '',
+      wallet: form.wallet.trim(),
+      discord: form.discord.trim(),
+      whatsapp: form.whatsapp.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    // TODO: enviar para o dashboard ADMIN (a construir) + persistir no banco (Neon).
+    console.log('[Nortoken] Nova solicitação de serviço:', request);
+    onServicePurchased(form.tokenId, activeCheckoutService.id); // marca como "Solicitado" no token
     setActiveCheckoutService(null);
-    alert(`Sucesso! O serviço de "${activeCheckoutService.title}" foi pago em USDC e agendado para o seu token "${selectedToken.name}". Nossos especialistas entrarão em contato.`);
+    setShowThankYou(true);
+    setTimeout(() => setShowThankYou(false), 6000);
   };
 
   return (
@@ -174,7 +202,7 @@ export default function PremiumStore({ tokens, wallet, onServicePurchased }: Pre
                 <div className={`pt-3 mt-auto border-t ${style.border} flex items-baseline justify-between`}>
                   <span className="text-[9px] font-mono uppercase tracking-widest text-gray-500">Subtotal</span>
                   <span className={`font-mono font-bold text-base ${style.text}`}>
-                    US$ {formatUsd(stage.totalUsd)}
+                    {formatUsd(stage.totalUsd)} USDC
                   </span>
                 </div>
               </div>
@@ -187,7 +215,7 @@ export default function PremiumStore({ tokens, wallet, onServicePurchased }: Pre
           <div className="flex-1 text-center md:text-left">
             <div className="text-[10px] font-mono uppercase tracking-widest text-amazon-neon mb-1.5">Investimento total estimado</div>
             <div className="flex items-baseline justify-center md:justify-start gap-2.5">
-              <span className="text-3xl sm:text-4xl font-black text-white font-mono">US$ {formatUsd(ENTERPRISE_TOTAL_USD)}</span>
+              <span className="text-3xl sm:text-4xl font-black text-white font-mono">{formatUsd(ENTERPRISE_TOTAL_USD)} USDC</span>
               <span className="text-xs text-gray-400">+40% (margem de execução já inclusa)</span>
             </div>
             <p className="text-[11px] text-gray-400 mt-2 leading-relaxed max-w-xl">
@@ -270,16 +298,19 @@ export default function PremiumStore({ tokens, wallet, onServicePurchased }: Pre
                   <div className="p-3 bg-white/5 rounded-2xl h-fit">
                     {getServiceIcon(serv.iconName)}
                   </div>
-                  {serv.badge && (
+                  {serv.comingSoon ? (
+                    <span className="text-[9px] font-mono font-bold tracking-wider uppercase bg-amber-400/15 text-amber-300 border border-amber-400/30 px-2.5 py-1 rounded-full">
+                      Em Breve
+                    </span>
+                  ) : isPurchased ? (
+                    <span className="text-[9px] font-mono font-bold bg-emerald-500 text-white px-2.5 py-1 rounded-full">
+                      SOLICITADO
+                    </span>
+                  ) : serv.badge ? (
                     <span className="text-[9px] font-mono font-bold tracking-wider uppercase bg-amazon-neon text-petroleum-dark px-2.5 py-1 rounded-full">
                       {serv.badge}
                     </span>
-                  )}
-                  {isPurchased && (
-                    <span className="text-[9px] font-mono font-bold bg-emerald-500 text-white px-2.5 py-1 rounded-full">
-                      CONTRATADO
-                    </span>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="space-y-1">
@@ -290,26 +321,30 @@ export default function PremiumStore({ tokens, wallet, onServicePurchased }: Pre
 
               <div className="pt-6 border-t border-white/5 mt-6 flex justify-between items-center">
                 <div>
-                  <span className="text-[10px] text-gray-400 block font-mono">VALOR ÚNICO</span>
-                  <span className="text-sm font-bold text-white font-mono">{serv.priceUsd} USDC</span>
-                  <span className="text-[10px] text-[gray] block font-mono">pago on-chain</span>
+                  {serv.comingSoon ? (
+                    <span className="text-sm font-bold text-amber-300 font-mono">Em Breve</span>
+                  ) : (
+                    <>
+                      <span className="text-[10px] text-gray-400 block font-mono">VALOR ÚNICO</span>
+                      <span className="text-sm font-bold text-white font-mono">{serv.priceUsd} USDC</span>
+                      <span className="text-[10px] text-gray-500 block font-mono">pago on-chain</span>
+                    </>
+                  )}
                 </div>
 
-                {isPurchased ? (
+                {serv.comingSoon ? (
+                  <span className="font-mono text-[10px] text-amber-300/70 font-bold px-3 py-2 rounded-xl border border-amber-400/20 bg-amber-400/5">
+                    Em breve
+                  </span>
+                ) : isPurchased ? (
                   <div className="font-mono text-[10px] text-emerald-400 font-bold flex items-center gap-1">
                     <CheckCircle className="w-4 h-4" />
-                    Agendado
+                    Em análise
                   </div>
                 ) : (
                   <button
                     id={`buy-service-btn-${serv.id}`}
-                    onClick={() => {
-                      if (!selectedToken) {
-                        alert('Crie um token antes de agendar assessoria.');
-                        return;
-                      }
-                      setActiveCheckoutService(serv);
-                    }}
+                    onClick={() => openRequest(serv)}
                     className="flex items-center gap-1 px-4 py-2 rounded-xl bg-white/5 hover:bg-amazon-neon text-white hover:text-petroleum-dark font-bold text-xs transition-all cursor-pointer"
                   >
                     Adquirir
@@ -322,18 +357,18 @@ export default function PremiumStore({ tokens, wallet, onServicePurchased }: Pre
         })}
       </div>
 
-      {/* CHECKOUT MODAL DRAWER SIMULATOR */}
+      {/* FORMULÁRIO DE SOLICITAÇÃO DE SERVIÇO */}
       {activeCheckoutService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-petroleum-dark/80 backdrop-blur-md">
-          <div className="w-full max-w-md bg-[#050e18] border border-amazon-light/30 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative">
-            
+          <div className="w-full max-w-md bg-[#050e18] border border-amazon-light/30 rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl relative">
+
             <div className="flex justify-between items-start border-b border-white/5 pb-3">
               <div>
-                <span className="text-[10px] text-amazon-neon font-mono uppercase">Checkout de Serviço</span>
-                <h3 className="font-display font-bold text-lg text-white mt-1">Nortoken Marketplace Payment</h3>
+                <span className="text-[10px] text-amazon-neon font-mono uppercase">Solicitar serviço</span>
+                <h3 className="font-display font-bold text-lg text-white mt-1">{activeCheckoutService.title}</h3>
+                <span className="text-[11px] font-mono text-emerald-400">{activeCheckoutService.priceUsd} USDC · pago on-chain</span>
               </div>
               <button
-                id="close-checkout-modal"
                 onClick={() => setActiveCheckoutService(null)}
                 className="bg-white/5 hover:bg-white/10 text-xs px-3 py-1 rounded-lg"
               >
@@ -341,46 +376,81 @@ export default function PremiumStore({ tokens, wallet, onServicePurchased }: Pre
               </button>
             </div>
 
-            <div className="space-y-4 text-xs font-mono text-gray-300">
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-1">
-                <span className="text-gray-400 font-mono text-[10px]">SERVIÇO MODULAR:</span>
-                <span className="text-sm font-bold text-white block">{activeCheckoutService.title}</span>
-                <span className="text-gray-405 block">Para aplicar ao token: <strong>{selectedToken?.name}</strong></span>
-              </div>
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Preencha seus dados. Nossa equipe entra em contato pra alinhar escopo, prazo e o pagamento on-chain.
+            </p>
 
-              {/* Pagamento em USDC (on-chain, self-custody) */}
-              <div className="p-3 bg-amazon-forest/15 rounded-xl border border-amazon-light/10 space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="flex items-center gap-1.5">
-                    <Coins className="w-4 h-4 text-amazon-neon" /> Pagamento em USDC
-                  </span>
-                  <span className="text-amazon-neon font-bold text-sm">{activeCheckoutService.priceUsd} USDC</span>
-                </div>
-                <div className="flex justify-between text-[10px] text-gray-400">
-                  <span>Seu saldo</span>
-                  <span className="font-mono">{wallet.usdcBalance.toLocaleString('en-US', { maximumFractionDigits: 0 })} USDC</span>
-                </div>
-                <p className="text-[10px] text-gray-500 leading-snug">
-                  Você assina a transferência direto da sua carteira (self-custody). A Nortoken não custodia fundos nem
-                  processa fiat.
-                </p>
-              </div>
-
-              {/* Total */}
-              <div className="flex justify-between items-center pt-2 border-t border-white/5 text-xs">
-                <span>Total a liquidar:</span>
-                <span className="text-cyan-400 font-bold text-sm">{activeCheckoutService.priceUsd} USDC</span>
-              </div>
-
-              <button
-                id="btn-confirm-checkout-store"
-                onClick={handleServiceBuySubmit}
-                className="w-full py-3 bg-gradient-to-r from-amazon-green via-amazon-light to-amazon-neon text-petroleum-dark font-extrabold rounded-xl text-center text-xs cursor-pointer"
-              >
-                Pagar {activeCheckoutService.priceUsd} USDC
-              </button>
+            <div className="space-y-3.5 text-xs">
+              <label className="block space-y-1">
+                <span className="text-[10px] uppercase tracking-wider text-gray-400 font-mono">Carteira</span>
+                <input
+                  value={form.wallet}
+                  onChange={(e) => setForm({ ...form, wallet: e.target.value })}
+                  placeholder="0x..."
+                  className="w-full px-3.5 py-2.5 rounded-xl glass-input font-mono"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[10px] uppercase tracking-wider text-gray-400 font-mono">Token que você criou</span>
+                <select
+                  value={form.tokenId}
+                  onChange={(e) => setForm({ ...form, tokenId: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-petroleum-deep border border-white/10 focus:outline-none focus:border-amazon-neon text-white cursor-pointer"
+                >
+                  {tokens.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name} (${t.symbol})</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[10px] uppercase tracking-wider text-gray-400 font-mono">Discord</span>
+                <input
+                  value={form.discord}
+                  onChange={(e) => setForm({ ...form, discord: e.target.value })}
+                  placeholder="seu_usuario ou link do servidor"
+                  className="w-full px-3.5 py-2.5 rounded-xl glass-input"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[10px] uppercase tracking-wider text-gray-400 font-mono">WhatsApp</span>
+                <input
+                  value={form.whatsapp}
+                  onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+                  placeholder="+55 (00) 00000-0000"
+                  className="w-full px-3.5 py-2.5 rounded-xl glass-input"
+                />
+              </label>
             </div>
 
+            <button
+              id="btn-submit-service-request"
+              onClick={handleRequestSubmit}
+              className="w-full py-3 bg-gradient-to-r from-amazon-green via-amazon-light to-amazon-neon text-petroleum-dark font-extrabold rounded-xl text-center text-xs cursor-pointer"
+            >
+              Enviar solicitação
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* JANELA FLUTUANTE DE AGRADECIMENTO */}
+      {showThankYou && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-petroleum-dark/70 backdrop-blur-sm"
+          onClick={() => setShowThankYou(false)}
+        >
+          <div className="w-full max-w-sm bg-[#04140f] border border-emerald-500/40 rounded-3xl p-8 text-center space-y-4 shadow-2xl">
+            <div className="w-14 h-14 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
+              <CheckCircle className="w-7 h-7" />
+            </div>
+            <h3 className="font-display font-bold text-xl text-white">A Nortoken agradece!</h3>
+            <p className="text-sm text-gray-300 leading-relaxed">Em breve entraremos em contato. 🌿</p>
+            <button
+              onClick={() => setShowThankYou(false)}
+              className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 hover:text-white"
+            >
+              Fechar
+            </button>
           </div>
         </div>
       )}

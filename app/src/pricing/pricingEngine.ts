@@ -92,4 +92,4 @@ export function quoteDeploy(
 }
 
 export const usd = (n: number): string =>
-  n.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' });
+  `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} USDC`;
