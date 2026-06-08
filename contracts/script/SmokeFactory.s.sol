@@ -38,7 +38,7 @@ contract SmokeFactory is Script {
             antiSnipeBlocks: 0,
             tradeCooldownSec: 0,
             maxWalletBps: 0,
-            maxTxBps: 0
+            maxTxBps: 0, taxBps: 0, taxTreasury: address(0)
         });
         address token = FACTORY.createToken(p);
         console.log("token criado:", token);

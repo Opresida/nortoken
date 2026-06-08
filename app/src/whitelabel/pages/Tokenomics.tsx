@@ -129,7 +129,23 @@ export default function TokenomicsPage({ config }: Props) {
                 <tr key={t.label} className="border-t text-sm sm:text-base font-medium" style={{ borderColor: T.divider, color: `var(--wl-fg)` }}>
                   <td className="py-4 flex items-center gap-2.5">
                     <span className="w-3 h-3 rounded-full shrink-0" style={{ background: segColor(i, n) }} />
-                    <span className="capitalize">{t.label}</span>
+                    <div className="min-w-0">
+                      <span className="capitalize">{t.label}</span>
+                      {t.toPool ? (
+                        <span className="block text-[11px] opacity-70" style={{ color: `var(--wl-primary)` }}>→ Pool de liquidez</span>
+                      ) : t.wallet ? (
+                        <a
+                          href={`https://sepolia.basescan.org/address/${t.wallet}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-[11px] font-mono opacity-70 hover:opacity-100 hover:underline"
+                          style={{ color: `var(--wl-primary)` }}
+                          title={t.wallet}
+                        >
+                          {t.wallet.slice(0, 8)}…{t.wallet.slice(-6)} ↗
+                        </a>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="py-4 px-4" style={{ color: `var(--wl-primary)` }}>{t.percent}%</td>
                   <td className="py-4 px-4 font-mono">{amount.toLocaleString('pt-BR')}</td>

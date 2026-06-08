@@ -21,7 +21,7 @@ contract DeployToken is Script {
             antiSnipeBlocks: 2,
             tradeCooldownSec: 30,
             maxWalletBps: 200, // 2%
-            maxTxBps: 100 // 1%
+            maxTxBps: 100, taxBps: 0, taxTreasury: address(0) // 1%
         });
 
         vm.startBroadcast(pk);

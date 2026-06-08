@@ -34,6 +34,10 @@ export interface TokenomicsItem {
   label: string;
   percent: number;
   color: string;
+  /** Carteira de destino (verificação pública da distribuição). */
+  wallet?: string;
+  /** Fatia que foi pro pool de liquidez (não é carteira). */
+  toPool?: boolean;
 }
 
 export interface RoadmapPhase {

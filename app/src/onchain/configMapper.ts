@@ -25,6 +25,8 @@ export interface InitParamsArgs {
   tradeCooldownSec: bigint; // uint64
   maxWalletBps: number; // uint16
   maxTxBps: number; // uint16
+  taxBps: number; // uint16 — a factory injeta o padrão do protocolo (app manda 0)
+  taxTreasury: Address; // a factory injeta o tesouro (app manda zero)
 }
 
 /** Espelha NortokenFactory.LockParams. */
@@ -116,6 +118,9 @@ export function toInitParams(cfg: TokenConfig, name: string, symbol: string, own
     tradeCooldownSec: BigInt(cfg.protections.tradeCooldownSec),
     maxWalletBps: pctToBps(cfg.protections.maxWalletPct),
     maxTxBps: pctToBps(cfg.protections.maxTxPct),
+    // A factory injeta a taxa condicional + tesouro (protocolo controla); o app só preenche placeholders.
+    taxBps: 0,
+    taxTreasury: '0x0000000000000000000000000000000000000000' as Address,
   };
 }
 

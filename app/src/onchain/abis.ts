@@ -26,6 +26,8 @@ export const FACTORY_ABI = [
           { name: 'tradeCooldownSec', type: 'uint64' },
           { name: 'maxWalletBps', type: 'uint16' },
           { name: 'maxTxBps', type: 'uint16' },
+          { name: 'taxBps', type: 'uint16' },
+          { name: 'taxTreasury', type: 'address' },
         ],
       },
     ],

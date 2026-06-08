@@ -32,7 +32,7 @@ contract NortokenERC20Test is Test {
             antiSnipeBlocks: antiSnipe,
             tradeCooldownSec: cooldown,
             maxWalletBps: maxWalletBps,
-            maxTxBps: maxTxBps
+            maxTxBps: maxTxBps, taxBps: 0, taxTreasury: address(0)
         });
         vm.prank(owner);
         token = new NortokenERC20(p);

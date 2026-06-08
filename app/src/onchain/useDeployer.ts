@@ -26,6 +26,21 @@ import type { InitParamsArgs, PoolAndLockArgs } from './configMapper';
 
 const CHAIN = baseSepolia; // Base Sepolia (84532) — única rede ativa por ora
 
+/** ABI mínima do NortokenDisperse (distribuição opcional do supply no lançamento). */
+const DISPERSE_ABI = [
+  {
+    type: 'function',
+    name: 'disperseToken',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'token', type: 'address' },
+      { name: 'recipients', type: 'address[]' },
+      { name: 'amounts', type: 'uint256[]' },
+    ],
+    outputs: [],
+  },
+] as const;
+
 export interface CreateTokenResult {
   hash: `0x${string}`;
   token: Address;
@@ -128,6 +143,42 @@ export function useDeployer() {
     [getClients],
   );
 
+  /**
+   * Distribuição OPCIONAL — envia o supply pras carteiras do tokenomics numa tx.
+   * aprova o disperse pelo total e chama disperseToken (from=owner, isento → passa pré-trading).
+   */
+  const distribute = useCallback(
+    async (token: Address, recipients: Address[], amounts: bigint[]): Promise<`0x${string}`> => {
+      const { walletClient, publicClient, account: acc } = await getClients();
+      const disperse = BASE_SEPOLIA.disperse;
+      const total = amounts.reduce((s, a) => s + a, 0n);
+
+      // 1) aprova o disperse a puxar o total do owner
+      const approveHash = await walletClient.writeContract({
+        address: token,
+        abi: TOKEN_ABI,
+        functionName: 'approve',
+        args: [disperse, total],
+        account: acc,
+        chain: CHAIN,
+      });
+      await publicClient.waitForTransactionReceipt({ hash: approveHash });
+
+      // 2) distribui pra todas as carteiras numa única tx
+      const hash = await walletClient.writeContract({
+        address: disperse,
+        abi: DISPERSE_ABI,
+        functionName: 'disperseToken',
+        args: [token, recipients, amounts],
+        account: acc,
+        chain: CHAIN,
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+      return hash;
+    },
+    [getClients],
+  );
+
   /** Renúncia de posse — SEMPRE por último (depois da pool). */
   const renounceOwnership = useCallback(
     async (token: Address): Promise<`0x${string}`> => {
@@ -153,8 +204,9 @@ export function useDeployer() {
       isEthAnchor: (anchor: Address) => anchor === ZERO_ADDRESS,
       createToken,
       createPoolAndLock,
+      distribute,
       renounceOwnership,
     }),
-    [wallet, account, createToken, createPoolAndLock, renounceOwnership],
+    [wallet, account, createToken, createPoolAndLock, distribute, renounceOwnership],
   );
 }

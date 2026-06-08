@@ -12,6 +12,9 @@ import {
   FolderOpen,
   Lock,
   Zap,
+  Globe,
+  FileText,
+  FileCheck2,
 } from 'lucide-react';
 import TrustBadge from './TrustBadge';
 import { Token, UserWallet } from '../types';
@@ -30,6 +33,7 @@ export default function Marketplace({ tokens, wallet, onTradeSimulated }: Market
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeInvestToken, setActiveInvestToken] = useState<Token | null>(null);
+  const [detailToken, setDetailToken] = useState<Token | null>(null);
   const [purchaseAmount, setPurchaseAmount] = useState(1); // frações (modo demo)
 
   // ── lado comprador real ──
@@ -195,6 +199,13 @@ export default function Marketplace({ tokens, wallet, onTradeSimulated }: Market
                   {token.description}
                 </p>
 
+                <button
+                  onClick={() => setDetailToken(token)}
+                  className="self-start inline-flex items-center gap-1 text-[11px] font-semibold text-amazon-neon hover:underline cursor-pointer"
+                >
+                  <FolderOpen className="w-3.5 h-3.5" /> Ver detalhes, documentos e links
+                </button>
+
                 {/* Technical data table */}
                 <div className="grid grid-cols-2 gap-3.5 border-y border-white/5 py-4 text-xs font-mono">
                   <div>
@@ -272,6 +283,119 @@ export default function Marketplace({ tokens, wallet, onTradeSimulated }: Market
           ))}
         </div>
       )}
+
+      {/* DETAIL MODAL — descrição completa + links oficiais + documentos */}
+      {detailToken && (() => {
+        const t = detailToken;
+        const site = t.config?.presence?.website?.url;
+        const paper = t.config?.presence?.whitepaper?.url;
+        const hasLinks = !!site || !!paper;
+        const docs = t.documents ?? [];
+        const canBuy = isReal(t) || !IS_TESTNET;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-petroleum-dark/80 backdrop-blur-md"
+            onClick={() => setDetailToken(null)}
+          >
+            <div
+              className="w-full max-w-lg bg-[#04111d] border border-amazon-light/30 rounded-3xl overflow-hidden shadow-2xl relative max-h-[90vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative h-40 shrink-0">
+                <img src={t.image} alt={t.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#04111d] to-transparent" />
+                <button
+                  onClick={() => setDetailToken(null)}
+                  className="absolute top-3 right-3 w-8 h-8 rounded-full bg-petroleum-dark/80 border border-white/10 text-gray-300 hover:text-white flex items-center justify-center cursor-pointer text-sm"
+                >
+                  ✕
+                </button>
+                {t.trustScore != null && (
+                  <div className="absolute bottom-3 left-4 bg-petroleum-dark/80 backdrop-blur-sm rounded-xl p-0.5 border border-white/10">
+                    <TrustBadge score={t.trustScore} variant="full" />
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 space-y-5 overflow-y-auto">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-display font-bold text-white text-lg">{t.name}</h3>
+                  <span className="font-mono text-amazon-neon text-sm font-bold shrink-0">${t.symbol}</span>
+                </div>
+                <p className="text-xs text-gray-300 leading-relaxed">{t.description}</p>
+
+                {t.config && t.config.trustSeal.autoLiquidityLock === false && (
+                  <div className="flex items-start gap-2 text-[11px] text-amber-400/90 bg-amber-400/5 border border-amber-400/15 rounded-xl p-2.5">
+                    <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span><strong>Taxa de transferência: 0,3%</strong> — este token não travou a liquidez, então cobra 0,3% por negociação (protocolo Nortoken).</span>
+                  </div>
+                )}
+
+                {hasLinks && (
+                  <div className="space-y-2">
+                    <h4 className="text-[11px] font-mono uppercase tracking-wider text-gray-400">Links Oficiais</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {site && (
+                        <a href={site} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white hover:border-amazon-neon/40 cursor-pointer">
+                          <Globe className="w-3.5 h-3.5 text-amazon-neon" /> Site oficial <ExternalLink className="w-3 h-3 text-gray-400" />
+                        </a>
+                      )}
+                      {paper && (
+                        <a href={paper} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white hover:border-amazon-neon/40 cursor-pointer">
+                          <FileText className="w-3.5 h-3.5 text-amazon-neon" /> Whitepaper <ExternalLink className="w-3 h-3 text-gray-400" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {docs.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-[11px] font-mono uppercase tracking-wider text-gray-400">Documentos do Projeto</h4>
+                    <div className="space-y-2">
+                      {docs.map((doc) => (
+                        <div key={doc.id} className="flex items-center justify-between gap-2 p-3 bg-white/5 rounded-xl border border-white/5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileCheck2 className="w-4 h-4 text-amazon-light shrink-0" />
+                            <div className="min-w-0">
+                              <span className="text-[11px] font-semibold text-white truncate block max-w-[200px]">{doc.name}</span>
+                              <span className="text-[9px] text-gray-400">{doc.type}</span>
+                            </div>
+                          </div>
+                          {doc.url ? (
+                            <a href={doc.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-amazon-neon hover:underline shrink-0">
+                              Abrir <ExternalLink className="w-3 h-3" />
+                            </a>
+                          ) : (
+                            <span className="text-[9px] text-gray-500 font-mono shrink-0">registrado</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!hasLinks && docs.length === 0 && (
+                  <p className="text-[11px] text-gray-500 text-center py-2">Este token ainda não publicou links ou documentos.</p>
+                )}
+
+                {canBuy ? (
+                  <button
+                    onClick={() => { const tk = t; setDetailToken(null); setBuyError(''); setActiveInvestToken(tk); }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-amazon-neon text-petroleum-dark font-extrabold text-sm font-mono uppercase hover:shadow-lg hover:shadow-amazon-neon/20 transition-all cursor-pointer"
+                  >
+                    <Zap className="w-4 h-4" /> Comprar
+                  </button>
+                ) : (
+                  <span className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-500 text-xs font-mono">
+                    <Lock className="w-3.5 h-3.5" /> Sem liquidez ainda
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* PURCHASE SIMULATOR MODAL */}
       {activeInvestToken && (

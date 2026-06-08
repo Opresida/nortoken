@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import TokenSelect from './TokenSelect';
 import {
   Sparkles,
   CheckCircle,
@@ -266,16 +267,7 @@ export default function PremiumStore({ tokens, wallet, onServicePurchased }: Pre
         {tokens.length === 0 ? (
           <span className="text-xs text-red-400 font-mono">Nenhum token ativado</span>
         ) : (
-          <select
-            id="premium-store-token-select"
-            value={selectedTokenId}
-            onChange={(e) => setSelectedTokenId(e.target.value)}
-            className="px-4 py-2.5 rounded-xl bg-petroleum-deep border border-white/5 focus:outline-none focus:border-amazon-neon text-sm font-semibold text-white ml-2 cursor-pointer"
-          >
-            {tokens.map(t => (
-              <option key={t.id} value={t.id}>{t.name} (${t.symbol})</option>
-            ))}
-          </select>
+          <TokenSelect tokens={tokens} value={selectedTokenId} onChange={setSelectedTokenId} className="ml-2" />
         )}
       </div>
 

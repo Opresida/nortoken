@@ -11,3 +11,6 @@ broadcast/**/*.json.tmp
 
 # Node (este workspace só expõe scripts; sem node_modules próprio)
 node_modules/
+
+# Carteiras temporarias de teste (chaves privadas) - NUNCA commitar
+.test-wallets.json

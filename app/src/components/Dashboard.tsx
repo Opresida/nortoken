@@ -4,11 +4,13 @@
  */
 
 import React, { useState } from 'react';
+import { isAddress } from 'viem';
+import TokenSelect from './TokenSelect';
+import { readBalances, fmtTokens } from '../onchain/balances';
 import {
   BarChart3,
   ExternalLink,
   ShieldCheck,
-  User,
   RefreshCw,
   FileCheck2,
   HelpCircle,
@@ -190,12 +192,45 @@ export default function Dashboard({
   const categoryTheme = getCategoryTheme(selectedToken.category);
 
   // Hardcoded holders simulation based on selected token
-  const simulatedHolders = [
-    { name: 'Carteira do Emissor (Você)', address: wallet.address || 'NoRtOkEn...7X9k', percentage: '80%', role: 'Fundador' },
-    { name: 'Fundo de Manejo Ecológico', address: 'EcoRes98uX...bN7y', percentage: '12%', role: 'Reserva' },
-    { name: 'Cooperativa Ribeirinha Local', address: 'CoopAmAzOn...wT5b', percentage: '6%', role: 'Comunidade' },
-    { name: 'Pool de Liquidez Nortoken DEX', address: 'PoolNorTok...9xW1', percentage: '2%', role: 'Market Maker' }
-  ];
+  // Distribuição: usa o tokenomics REAL definido na criação; cai no mock só pros tokens demo antigos.
+  const hasTokenomics = !!selectedToken.tokenomics && selectedToken.tokenomics.length > 0;
+  const simulatedHolders = hasTokenomics
+    ? selectedToken.tokenomics!.map((t) => ({
+        name: t.label,
+        address: t.toPool ? '→ Pool de liquidez' : t.wallet ? '' : 'Alocação definida no lançamento',
+        percentage: `${t.percent}%`,
+        role: t.toPool ? 'Pool' : 'Alocação',
+        color: t.color,
+        wallet: t.toPool ? undefined : t.wallet,
+        toPool: !!t.toPool,
+      }))
+    : [
+        { name: 'Carteira do Emissor (Você)', address: wallet.address || 'NoRtOkEn...7X9k', percentage: '80%', role: 'Fundador', color: '#10b981', wallet: undefined as string | undefined, toPool: false },
+        { name: 'Fundo de Manejo Ecológico', address: 'EcoRes98uX...bN7y', percentage: '12%', role: 'Reserva', color: '#34d399', wallet: undefined as string | undefined, toPool: false },
+        { name: 'Cooperativa Ribeirinha Local', address: 'CoopAmAzOn...wT5b', percentage: '6%', role: 'Comunidade', color: '#22d3ee', wallet: undefined as string | undefined, toPool: false },
+        { name: 'Pool de Liquidez Nortoken DEX', address: 'PoolNorTok...9xW1', percentage: '2%', role: 'Market Maker', color: '#a78bfa', wallet: undefined as string | undefined, toPool: false },
+      ];
+
+  // Saldos ao vivo das carteiras de distribuição (verificação pública on-chain).
+  const [liveBalances, setLiveBalances] = useState<Record<string, bigint>>({});
+  React.useEffect(() => {
+    const addrs = (selectedToken.tokenomics ?? [])
+      .filter((t) => !t.toPool && t.wallet && isAddress(t.wallet))
+      .map((t) => t.wallet as Address);
+    if (!selectedToken.onChainChainId || !selectedToken.contractAddress || addrs.length === 0) {
+      setLiveBalances({});
+      return;
+    }
+    let cancelled = false;
+    readBalances(selectedToken.contractAddress as Address, addrs).then((bals) => {
+      if (cancelled) return;
+      const map: Record<string, bigint> = {};
+      addrs.forEach((a, i) => { map[a.toLowerCase()] = bals[i]; });
+      setLiveBalances(map);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedToken.id, isOnChain]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 text-white">
@@ -210,21 +245,10 @@ export default function Dashboard({
           </p>
         </div>
 
-        {/* Token selector dropdown */}
+        {/* Token selector (dropdown customizado) */}
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-400 font-mono">Filtrar Ativo:</span>
-          <select
-            id="token-selector-dropdown"
-            value={selectedTokenId}
-            onChange={(e) => setSelectedTokenId(e.target.value)}
-            className="px-4 py-2.5 rounded-xl bg-petroleum-card border border-white/10 text-sm font-semibold focus:outline-none focus:border-amazon-neon cursor-pointer text-white"
-          >
-            {tokens.map((token) => (
-              <option key={token.id} value={token.id}>
-                {token.name} (${token.symbol})
-              </option>
-            ))}
-          </select>
+          <TokenSelect tokens={tokens} value={selectedTokenId} onChange={setSelectedTokenId} />
         </div>
       </div>
 
@@ -544,7 +568,7 @@ export default function Dashboard({
           {/* Holder distribution module */}
           <div className="bg-petroleum-card border border-white/5 rounded-3xl p-6 space-y-5">
             <h3 className="font-display font-bold text-sm text-white border-b border-white/5 pb-3 uppercase tracking-wider">
-              Distribuição de Holders ($${selectedToken.symbol})
+              {`${hasTokenomics ? 'Tokenomics · Alocação' : 'Distribuição de Holders'} ($${selectedToken.symbol})`}
             </h3>
 
             <div className="space-y-4">
@@ -552,10 +576,26 @@ export default function Dashboard({
                 <div key={idx} className="flex justify-between items-center text-xs p-2.5 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all font-mono">
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: holder.color }} />
                       <span className="text-[11px] font-semibold text-white truncate max-w-[125px] block">{holder.name}</span>
                     </div>
-                    <span className="text-[9px] text-gray-400 block mt-0.5">{holder.address}</span>
+                    {holder.wallet ? (
+                      <a
+                        href={`https://sepolia.basescan.org/address/${holder.wallet}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[9px] text-amazon-neon hover:underline flex items-center gap-1 mt-0.5"
+                        title={holder.wallet}
+                      >
+                        {holder.wallet.slice(0, 8)}…{holder.wallet.slice(-6)}
+                        <ExternalLink className="w-2.5 h-2.5" />
+                        {liveBalances[holder.wallet.toLowerCase()] !== undefined && (
+                          <span className="text-gray-400">· {fmtTokens(liveBalances[holder.wallet.toLowerCase()])}</span>
+                        )}
+                      </a>
+                    ) : (
+                      <span className="text-[9px] text-gray-400 block mt-0.5">{holder.address}</span>
+                    )}
                   </div>
                   <div className="text-right">
                     <span className="text-amazon-neon font-bold text-xs">{holder.percentage}</span>
@@ -790,11 +830,15 @@ export default function Dashboard({
               </div>
               <div className="bg-white/5 rounded-xl p-2.5 border border-white/5">
                 <span className="text-gray-400 block">Lock</span>
-                <span className="text-white font-bold">{selectedToken.config.trustSeal.liquidityLockDays}d</span>
+                <span className={`font-bold ${selectedToken.config.trustSeal.autoLiquidityLock ? 'text-white' : 'text-gray-500'}`}>
+                  {selectedToken.config.trustSeal.autoLiquidityLock ? `${selectedToken.config.trustSeal.liquidityLockDays}d` : 'Não travada'}
+                </span>
               </div>
               <div className="bg-white/5 rounded-xl p-2.5 border border-white/5">
                 <span className="text-gray-400 block">Keeper</span>
-                <span className="text-cyan-300 font-bold">Mazari</span>
+                <span className={`font-bold ${selectedToken.config.trustSeal.autoLiquidityLock ? 'text-cyan-300' : 'text-gray-500'}`}>
+                  {selectedToken.config.trustSeal.autoLiquidityLock ? 'Mazari' : '—'}
+                </span>
               </div>
             </div>
 

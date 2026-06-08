@@ -17,6 +17,18 @@
     }
   },
   "nortokenDeployments": {
+    "baseSepolia_v4_TAX_ATIVO": {
+      "_comment": "TRIO v4 ATIVO (com TAXA CONDICIONAL): todo token nasce com 0,3% (30 bps) de fee-on-transfer pro tesouro; ao TRAVAR a liquidez (createPoolAndLock) a factory chama token.disableTax() -> token vira limpo. Isencao de taxa = conjunto FIXO (owner/token/tesouro), owner NAO pode dodge. Deployado+verificado 2026-06-08. EIP-170 ok (token 11.5KB / factory 18.5KB). 53 forge tests verdes (49 + 4 da taxa).",
+      "MazariSwapHookV3": "0xA39cb2daE62F788195CCdB147155eae9915580CC",
+      "MalleableLiquidityLock": "0x82644C1BCA7dB9707C77f6eA8A4984624d350f45",
+      "NortokenFactory": "0x08De01b7A9a31357f85411Cc526A972E3b1B9917",
+      "NortokenFactory_note": "PROTOCOL_TAX_BPS=30 injetado no createToken; createPoolAndLock zera (disableTax). owner do hook/keeper/treasury = carteira de obra 0xB1390d (testnet).",
+      "NortokenSwapRouter": "0xC97b1bc7Bc1D14b6AEfd6BeDa3580564E092BCDa (reusado do v3; PoolKey generica)",
+      "StateView": "0x571291b572ed32cE6751a2cb2486EbEe8DEfB9B4",
+      "NortokenDisperse": "0x8D4bF383051AF366ba76b1ce770B05b28AD6E11e",
+      "teste_onchain_taxa": "token TAXO 0x746510ea9440f40e649266806196094e624Dffc6: walletA->walletB de 1000 -> walletB 997, tesouro +3 (0,3%). Confirmado.",
+      "deployer": "0xB1390d94faCBc45DB9D509b7b050141C83B56055"
+    },
     "baseSepolia_v3_ATIVO": {
       "_comment": "TRIO v3 ATIVO (front<->back alinhado): hook com OWNER EXPLICITO + TAXA DO CLIENTE por-pool. Substitui o conjunto v2 abaixo. Deployado+verificado 2026-06-05.",
       "MazariSwapHookV3": "0xDA4e860FFD739F8A63851E19Be1AafA5D8B480CC",
@@ -28,6 +40,8 @@
       "NortokenSwapRouter_note": "Lado COMPRADOR (rota Market). swapExactIn(key,zeroForOne,amountIn,minAmountOut) payable — compra ETH->token e entrega ao comprador; hook cobra protocolo+cliente no swap; refund de ETH; slippage via minAmountOut. 2 testes. Verificado.",
       "StateView": "0x571291b572ed32cE6751a2cb2486EbEe8DEfB9B4",
       "StateView_note": "Canonico V4 — UI le getSlot0(poolId) p/ preco real na Market.",
+      "NortokenDisperse": "0x8D4bF383051AF366ba76b1ce770B05b28AD6E11e",
+      "NortokenDisperse_note": "Distribuicao OPCIONAL do supply no lancamento: owner aprova + disperseToken(token,recipients[],amounts[]) envia pra N carteiras numa tx. from=owner (isento) -> passa pre-trading. Deployado + VERIFICADO no BaseScan 2026-06-08. 2 testes fork verdes. Teste real E2E: token DIST distribuido pras 4 carteiras OK.",
       "smokeTest_dualFee": {
         "note": "E2E v3: createToken -> createPoolAndLock(ETH, clientFee 200bps) -> swap. Fee duplo capturado no ancora.",
         "token": "0x60AE68C10bf1581d6D23c0B5Ebb6490ab765fdA5",

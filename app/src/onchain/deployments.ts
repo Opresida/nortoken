@@ -23,6 +23,7 @@ export interface ChainDeployment {
   factory: Address;
   swapRouter: Address; // router de compra/venda nas pools Nortoken
   stateView: Address; // leitura de preço (slot0) das pools V4
+  disperse: Address; // distribuidor opcional de supply no lançamento (NortokenDisperse)
   explorer: string;
 }
 
@@ -37,11 +38,13 @@ export const BASE_SEPOLIA: ChainDeployment = {
   live: true,
   poolManager: '0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408',
   usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-  hook: '0xDA4e860FFD739F8A63851E19Be1AafA5D8B480CC',
-  lock: '0x10ee52ad60b5b8a0d6bec6F31D49a466e423e9c2',
-  factory: '0xB6BcE4CaCF4285e64de79Bcbf5Aee69cC65c9C78',
+  // Trio v4 (com TAXA CONDICIONAL 0,3% no token não-travado). Substitui o v3.
+  hook: '0xA39cb2daE62F788195CCdB147155eae9915580CC',
+  lock: '0x82644C1BCA7dB9707C77f6eA8A4984624d350f45',
+  factory: '0x08De01b7A9a31357f85411Cc526A972E3b1B9917',
   swapRouter: '0xC97b1bc7Bc1D14b6AEfd6BeDa3580564E092BCDa',
   stateView: '0x571291b572ed32cE6751a2cb2486EbEe8DEfB9B4',
+  disperse: '0x8D4bF383051AF366ba76b1ce770B05b28AD6E11e',
   explorer: 'https://sepolia.basescan.org',
 };
 

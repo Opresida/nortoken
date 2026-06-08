@@ -24,7 +24,7 @@ import {
   Flame,
   Globe,
 } from 'lucide-react';
-import { Token, TokenDocument, UserWallet, TokenConfig, EvmNetwork, ProjectAssetStatus } from '../types';
+import { Token, TokenDocument, UserWallet, TokenConfig, EvmNetwork, ProjectAssetStatus, TokenomicsItem } from '../types';
 import { ACTIVE_PRESET } from '../data/presets';
 import { NETWORKS } from '../pricing/gasOracle';
 import { quoteDeploy } from '../pricing/pricingEngine';
@@ -34,8 +34,9 @@ import { ChevronDown } from 'lucide-react';
 import TrustBadge from './TrustBadge';
 import { IS_TESTNET } from '../onchain/env';
 import { useDeployer } from '../onchain/useDeployer';
-import { toInitParams, type Address } from '../onchain/configMapper';
-import { BASE_SEPOLIA, NETWORK_LIVE } from '../onchain/deployments';
+import { toInitParams, toPoolAndLockArgs, type Address } from '../onchain/configMapper';
+import { BASE_SEPOLIA, NETWORK_LIVE, ZERO_ADDRESS } from '../onchain/deployments';
+import { isAddress, parseEther } from 'viem';
 
 interface TokenCreatorProps {
   wallet: UserWallet;
@@ -62,11 +63,31 @@ function makeDefaultConfig(initialSupply: number): TokenConfig {
       honeypotFreeAttest: true,
     },
     taxes: { protocolFeeBps: PROTOCOL_FEE_BPS, clientTaxBps: 0, clientTreasury: '' },
+    tokenomics: [
+      { label: 'Liquidez DEX', percent: 30, color: '#10b981' },
+      { label: 'Comunidade & Airdrops', percent: 25, color: '#34d399' },
+      { label: 'Fundadores & Equipe', percent: 20, color: '#22d3ee' },
+      { label: 'Reserva / Tesouro', percent: 15, color: '#a78bfa' },
+      { label: 'Marketing & Parcerias', percent: 10, color: '#fb923c' },
+    ],
     presence: {
       website: { has: false, viaNortoken: false },
       whitepaper: { has: false, viaNortoken: false },
     },
   };
+}
+
+/** Valida o passo Tokenomics: soma 100% e, se a distribuição automática estiver ligada,
+ *  toda fatia não-pool com % > 0 precisa de uma carteira 0x válida. */
+function tokenomicsValid(cfg: TokenConfig): boolean {
+  const items = cfg.tokenomics ?? [];
+  const total = items.reduce((s, t) => s + (Number(t.percent) || 0), 0);
+  if (Math.abs(total - 100) > 0.01) return false;
+  if (cfg.autoDistribute) {
+    const need = items.filter((t) => !t.toPool && (Number(t.percent) || 0) > 0);
+    if (!need.every((t) => isAddress(t.wallet ?? ''))) return false;
+  }
+  return true;
 }
 
 /** Pequeno toggle reutilizável. */
@@ -106,6 +127,155 @@ function Toggle({
   );
 }
 
+/** Editor de alocação de supply (tokenomics) — linhas editáveis, validação de 100%
+ *  e distribuição automática OPCIONAL (carteira por fatia + marcador "→ Pool"). */
+function TokenomicsEditor({
+  items,
+  onChange,
+  autoDistribute,
+  onToggleDistribute,
+}: {
+  items: TokenomicsItem[];
+  onChange: (next: TokenomicsItem[]) => void;
+  autoDistribute: boolean;
+  onToggleDistribute: (v: boolean) => void;
+}) {
+  const total = items.reduce((s, t) => s + (Number(t.percent) || 0), 0);
+  const ok = Math.abs(total - 100) < 0.01;
+
+  const update = (i: number, patch: Partial<TokenomicsItem>) =>
+    onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+  const remove = (i: number) => onChange(items.filter((_, idx) => idx !== i));
+  const add = () => onChange([...items, { label: 'Nova categoria', percent: 0, color: '#64748b' }]);
+  // Marca a fatia como "vai pro pool" — só 1 por vez, e limpa a carteira dela.
+  const setPool = (i: number, on: boolean) =>
+    onChange(
+      items.map((it, idx) =>
+        idx === i
+          ? { ...it, toPool: on, wallet: on ? undefined : it.wallet }
+          : { ...it, toPool: on ? false : it.toPool },
+      ),
+    );
+
+  return (
+    <div className="bg-white/5 rounded-2xl border border-white/5 p-5 space-y-4">
+      {/* barra combinada de alocação */}
+      <div className="h-3 rounded-full bg-white/10 overflow-hidden flex">
+        {items.map((it, i) => (
+          <div
+            key={i}
+            style={{ width: `${Math.min(100, Number(it.percent) || 0)}%`, backgroundColor: it.color }}
+            title={`${it.label} — ${it.percent}%`}
+          />
+        ))}
+      </div>
+
+      <div className="space-y-2.5">
+        {items.map((it, i) => {
+          const badAddr = autoDistribute && !it.toPool && !!it.wallet && !isAddress(it.wallet);
+          return (
+            <div key={i} className="p-2.5 rounded-xl bg-white/5 border border-white/5 space-y-2">
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="color"
+                  value={it.color}
+                  onChange={(e) => update(i, { color: e.target.value })}
+                  className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border border-white/10 shrink-0"
+                  aria-label="Cor"
+                />
+                <input
+                  type="text"
+                  value={it.label}
+                  onChange={(e) => update(i, { label: e.target.value })}
+                  placeholder="Categoria"
+                  className="flex-1 min-w-0 px-3 py-1.5 rounded-lg bg-petroleum-deep border border-white/10 text-sm text-white focus:outline-none focus:border-amazon-neon"
+                />
+                <div className="flex items-center gap-1 shrink-0">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={it.percent}
+                    onChange={(e) => update(i, { percent: Math.max(0, Math.min(100, Number(e.target.value))) })}
+                    className="w-16 px-2 py-1.5 rounded-lg bg-petroleum-deep border border-white/10 text-sm text-white text-right font-mono focus:outline-none focus:border-amazon-neon"
+                  />
+                  <span className="text-xs text-gray-400">%</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => remove(i)}
+                  className="p-1.5 text-gray-400 hover:text-red-400 cursor-pointer shrink-0"
+                  aria-label="Remover"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Linha de carteira — só quando a distribuição automática está ligada */}
+              {autoDistribute && (
+                <div className="flex items-center gap-2 pl-[42px]">
+                  {it.toPool ? (
+                    <span className="flex-1 text-[11px] font-semibold text-amazon-neon bg-amazon-neon/10 px-3 py-1.5 rounded-lg">
+                      → Vai pro pool de liquidez (sem carteira)
+                    </span>
+                  ) : (
+                    <input
+                      type="text"
+                      value={it.wallet ?? ''}
+                      onChange={(e) => update(i, { wallet: e.target.value.trim() })}
+                      placeholder="0x… carteira de destino desta fatia"
+                      className={`flex-1 min-w-0 px-3 py-1.5 rounded-lg bg-petroleum-deep border text-xs font-mono text-white focus:outline-none ${
+                        badAddr ? 'border-red-500/60' : 'border-white/10 focus:border-amazon-neon'
+                      }`}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPool(i, !it.toPool)}
+                    className={`text-[10px] font-bold px-2 py-1.5 rounded-lg shrink-0 cursor-pointer transition-colors ${
+                      it.toPool ? 'bg-amazon-neon/20 text-amazon-neon' : 'bg-white/5 text-gray-400 hover:text-white'
+                    }`}
+                    title="Marcar esta fatia como liquidez (vai pro pool, não pra carteira)"
+                  >
+                    → Pool
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={add}
+          className="text-xs font-semibold text-amazon-neon hover:text-white px-3 py-1.5 rounded-lg bg-amazon-neon/10 hover:bg-amazon-neon/20 cursor-pointer transition-colors"
+        >
+          + Adicionar categoria
+        </button>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-400 text-xs">Total:</span>
+          <span className={`font-mono font-bold ${ok ? 'text-emerald-400' : 'text-red-400'}`}>
+            {total.toFixed(0)}%
+          </span>
+          {!ok && <span className="text-[11px] text-red-400">(precisa somar 100%)</span>}
+        </div>
+      </div>
+
+      {/* Toggle de distribuição automática */}
+      <div className="pt-1">
+        <Toggle
+          on={autoDistribute}
+          onChange={onToggleDistribute}
+          label="Distribuir automaticamente no lançamento"
+          hint="Envia os tokens pras carteiras acima ao lançar (custa gás extra). Desligado = só alocação informativa, sem custo."
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function TokenCreator({ wallet, connectWallet, onTokenCreated, setTab }: TokenCreatorProps) {
   const preset = ACTIVE_PRESET;
 
@@ -136,6 +306,13 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
 
   // Documentos
   const [documents, setDocuments] = useState<TokenDocument[]>([]);
+  const [docLinkUrl, setDocLinkUrl] = useState('');
+  const [docLinkName, setDocLinkName] = useState('');
+
+  // Parâmetros de execução da pool (passo 2). A DECISÃO de criar+travar vive no
+  // Selo de Confiança (config.trustSeal.autoLiquidityLock) — fonte única que pontua o Trust Score.
+  const [poolTokenPct, setPoolTokenPct] = useState(30);
+  const [poolEthAmount, setPoolEthAmount] = useState('0.05');
 
   // Deploy
   const [isDeploying, setIsDeploying] = useState(false);
@@ -309,15 +486,77 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
 
   const removeDoc = (id: string) => setDocuments(prev => prev.filter(d => d.id !== id));
 
+  // Adiciona um documento por LINK público (acessível por qualquer comprador no Mercado).
+  const docLinkValid = /^https?:\/\/.+/i.test(docLinkUrl.trim());
+  const addDocByLink = () => {
+    const url = docLinkUrl.trim();
+    if (!docLinkValid) return;
+    const name = docLinkName.trim() || url.replace(/^https?:\/\//i, '').slice(0, 40);
+    setDocuments(prev => [
+      ...prev,
+      {
+        id: Math.random().toString(36).substring(4),
+        name,
+        type: 'Link público',
+        url,
+        uploadedAt: new Date().toISOString(),
+      },
+    ]);
+    setDocLinkUrl('');
+    setDocLinkName('');
+  };
+
   // ── Deploy REAL (passo 1: criar o token on-chain via Privy + viem) ──
   const startRealDeploy = async () => {
+    // Integridade: se o Selo prometeu lock de liquidez, exigir ETH > 0 pra DE FATO travar (score = realidade).
+    if (config.trustSeal.autoLiquidityLock && !(Number(poolEthAmount) > 0)) {
+      alert('Você ativou o "Lock de liquidez" no Selo de Confiança. Informe o ETH a parear na Revisão para criar e travar a pool — ou desligue o lock na Configuração.');
+      return;
+    }
     setIsDeploying(true);
     setDeployStep(1);
     try {
       const initParams = toInitParams(config, name, symbol.toUpperCase() || 'NOR', wallet.address as Address);
       setDeployStep(2);
       const { token, hash } = await deployer.createToken(initParams);
-      setDeployStep(4);
+
+      // Distribuição automática OPCIONAL — envia o supply pras carteiras das fatias não-pool.
+      if (config.autoDistribute) {
+        setDeployStep(3);
+        const supply = config.supply.initial;
+        const rows = (config.tokenomics ?? []).filter(
+          (t) => !t.toPool && !!t.wallet && isAddress(t.wallet) && (Number(t.percent) || 0) > 0,
+        );
+        if (rows.length > 0) {
+          const recipients = rows.map((t) => t.wallet as Address);
+          const amounts = rows.map((t) => parseEther(String(Math.floor((supply * t.percent) / 100))));
+          await deployer.distribute(token, recipients, amounts);
+        }
+      }
+
+      // Passo 2 — criar pool + travar (Uniswap V4 + keeper Mazari). Acionado pela ÚNICA
+      // fonte de verdade do lock: o Selo de Confiança (autoLiquidityLock), que pontua o Trust Score.
+      let poolLockId: string | undefined;
+      if (config.trustSeal.autoLiquidityLock) {
+        setDeployStep(4);
+        const tokenAmount = parseEther(String(Math.floor((config.supply.initial * poolTokenPct) / 100)));
+        const anchorAmount = parseEther(String(poolEthAmount || '0'));
+        const args = toPoolAndLockArgs(config, ZERO_ADDRESS, {
+          tokenAmount,
+          anchorAmount,
+          anchorIsToken0: true, // ETH (0x0) é currency0
+        });
+        const { lockId } = await deployer.createPoolAndLock(token, args, anchorAmount);
+        poolLockId = lockId.toString();
+      }
+
+      // Renúncia de ownership — SEMPRE por último (depois da pool, senão trava setExempt)
+      if (config.trustSeal.renounceOwnership) {
+        setDeployStep(5);
+        await deployer.renounceOwnership(token);
+      }
+
+      setDeployStep(6);
       const newToken: Token = {
         id: name.toLowerCase().replace(/\s+/g, '-') + '-' + token.slice(2, 6),
         name,
@@ -339,10 +578,12 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
         premiumServices: contractedServices,
         analytics: [{ date: 'Hoje', volume: 0, price: 1.0, holders: 1 }],
         config,
+        tokenomics: config.tokenomics,
         network: 'base',
         presetId: preset.id,
         trustScore: trust.score,
         onChainChainId: BASE_SEPOLIA.chainId, // marca como token REAL on-chain
+        poolLockId, // setado se criou pool → vira comprável no Mercado
       };
       onTokenCreated(newToken);
       console.log(`[Nortoken] token real: ${BASE_SEPOLIA.explorer}/address/${token} (tx ${hash})`);
@@ -403,6 +644,7 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
               premiumServices: contractedServices,
               analytics: [{ date: 'Hoje', volume: quote.totalDeployUsd, price: 1.0, holders: 1 }],
               config,
+              tokenomics: config.tokenomics,
               network,
               presetId: preset.id,
               trustScore: trust.score,
@@ -417,7 +659,7 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
     }, 1200);
   };
 
-  const STEP_LABELS = ['Segmento', 'Identidade', 'Configuração', 'Documentos', 'Revisão'];
+  const STEP_LABELS = ['Segmento', 'Identidade', 'Configuração', 'Tokenomics', 'Documentos', 'Revisão'];
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 text-white relative">
@@ -583,7 +825,10 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                 ))}
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-gray-300">Imagem Representativa (URL):</label>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="block text-xs font-semibold text-gray-300">Imagem Representativa (URL):</label>
+                    <span className="text-[10px] font-mono text-amazon-neon shrink-0">Ideal: 800×400px (horizontal)</span>
+                  </div>
                   <input
                     id="input-token-image"
                     type="text"
@@ -592,6 +837,9 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                     placeholder="Deixe em branco para ícone automático"
                     className="w-full px-4 py-3 rounded-xl border glass-input text-sm"
                   />
+                  <p className="text-[10px] text-gray-400 leading-snug">
+                    Vira o banner do card no Mercado — use uma imagem <strong className="text-gray-300">horizontal (landscape)</strong>, ~2:1, em PNG ou JPG.
+                  </p>
                 </div>
 
                 <div className="space-y-1.5">
@@ -935,10 +1183,15 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                 </div>
                 <Toggle
                   label="Lock automático de liquidez"
-                  hint="Trava a liquidez por um período — impede rug pull."
+                  hint="Cria a pool e TRAVA a liquidez no lançamento (anti-rug, keeper Mazari). É ISTO que conta no Trust Score. SEM travar, o token nasce com 0,3% de taxa em toda negociação (Nortoken) — travar zera a taxa."
                   on={config.trustSeal.autoLiquidityLock}
                   onChange={v => setSeal({ autoLiquidityLock: v })}
                 />
+                {!config.trustSeal.autoLiquidityLock && (
+                  <p className="text-[10px] text-amber-400/80 leading-snug">
+                    ⚠️ Liquidez NÃO travada → seu token terá <strong>0,3% de taxa</strong> em todas as transferências (vai pra Nortoken) e <strong>Trust Score menor</strong>. Trave a liquidez pra um token 100% limpo.
+                  </p>
+                )}
                 {config.trustSeal.autoLiquidityLock && (
                   <label className="space-y-1 block">
                     <span className="text-[10px] uppercase text-gray-400">Dias de lock</span>
@@ -1075,8 +1328,38 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
           </div>
         )}
 
-        {/* STEP 4 — DOCUMENTOS */}
+        {/* STEP 4 — TOKENOMICS (alocação de supply) */}
         {step === 4 && (
+          <div className="space-y-6">
+            <div className="border-b border-white/10 pb-4">
+              <h2 className="text-xl font-black italic uppercase tracking-tight">Tokenomics — Alocação do Supply</h2>
+              <p className="text-xs text-gray-400 mt-1">
+                Defina como o supply será distribuído entre os stakeholders. O total precisa somar
+                exatamente <strong className="text-white">100%</strong> para avançar. Isso aparece no seu
+                painel e, se você contratar o whitelabel, na página pública do projeto.
+              </p>
+            </div>
+
+            <TokenomicsEditor
+              items={config.tokenomics ?? []}
+              onChange={(next) => setConfig((c) => ({ ...c, tokenomics: next }))}
+              autoDistribute={!!config.autoDistribute}
+              onToggleDistribute={(v) => setConfig((c) => ({ ...c, autoDistribute: v }))}
+            />
+
+            <StepNav
+              onBack={() => setStep(3)}
+              onNext={() => {
+                if (!tokenomicsValid(config)) return;
+                setStep(5);
+              }}
+              nextDisabled={!tokenomicsValid(config)}
+            />
+          </div>
+        )}
+
+        {/* STEP 5 — DOCUMENTOS */}
+        {step === 5 && (
           <div className="space-y-6">
             <div className="border-b border-white/10 pb-4">
               <h2 className="text-xl font-black italic uppercase tracking-tight">Documentação de Suporte (Opcional)</h2>
@@ -1106,6 +1389,45 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                     <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">{dt.hint}</p>
                   </div>
                 ))}
+
+                {/* Adicionar documento por LINK público (acessível no Mercado) */}
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-amazon-neon" />
+                    <h4 className="text-xs font-semibold text-white">Adicionar por link público</h4>
+                  </div>
+                  <p className="text-[10px] text-gray-400 leading-snug">
+                    Um link público (IPFS, Drive, etc.) fica acessível pra quem visita seu token no Mercado.
+                  </p>
+                  <input
+                    type="text"
+                    value={docLinkName}
+                    onChange={e => setDocLinkName(e.target.value)}
+                    placeholder="Nome (ex.: Whitepaper, Auditoria)"
+                    className="w-full px-3 py-2 rounded-lg border glass-input text-xs"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={docLinkUrl}
+                      onChange={e => setDocLinkUrl(e.target.value)}
+                      placeholder="https://…"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-lg border glass-input text-xs font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={addDocByLink}
+                      disabled={!docLinkValid}
+                      className={`px-3 py-2 rounded-lg text-xs font-bold shrink-0 transition-colors ${
+                        docLinkValid
+                          ? 'bg-amazon-neon/20 text-amazon-neon hover:bg-amazon-neon/30 cursor-pointer'
+                          : 'bg-white/5 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      Adicionar
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="p-5 bg-amazon-dark/40 rounded-2xl border border-white/5 space-y-4 flex flex-col justify-between h-full">
@@ -1130,8 +1452,12 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                               <CheckCircle className="w-3.5 h-3.5" />
                             </div>
                             <div>
-                              <div className="text-[11px] font-semibold text-white truncate max-w-[150px]">{doc.name}</div>
-                              <div className="text-[9px] text-gray-400">{doc.type} • {doc.fileSize}</div>
+                              {doc.url ? (
+                                <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-semibold text-amazon-neon hover:underline truncate max-w-[150px] block">{doc.name}</a>
+                              ) : (
+                                <div className="text-[11px] font-semibold text-white truncate max-w-[150px]">{doc.name}</div>
+                              )}
+                              <div className="text-[9px] text-gray-400">{doc.type}{doc.fileSize ? ` • ${doc.fileSize}` : ''}</div>
                             </div>
                           </div>
                           <button
@@ -1153,12 +1479,12 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
               </div>
             </div>
 
-            <StepNav onBack={() => setStep(3)} onNext={() => setStep(5)} nextLabel="Revisar & Lançar" />
+            <StepNav onBack={() => setStep(4)} onNext={() => setStep(6)} nextLabel="Revisar & Lançar" />
           </div>
         )}
 
-        {/* STEP 5 — REVISÃO + PRICING + DEPLOY */}
-        {step === 5 && (
+        {/* STEP 6 — REVISÃO + PRICING + DEPLOY */}
+        {step === 6 && (
           <div className="space-y-6">
             <div className="border-b border-white/10 pb-4">
               <h2 className="text-xl font-black italic uppercase tracking-tight">Revisão & Lançamento</h2>
@@ -1291,23 +1617,94 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                   </div>
                 </div>
 
+                {/* Liquidez Inicial — passo 2 (criar pool + lock), opcional */}
+                {(() => {
+                  const distributedPct = config.autoDistribute
+                    ? (config.tokenomics ?? [])
+                        .filter((t) => !t.toPool && t.wallet && isAddress(t.wallet) && (Number(t.percent) || 0) > 0)
+                        .reduce((s, t) => s + (Number(t.percent) || 0), 0)
+                    : 0;
+                  const availablePct = Math.max(0, 100 - distributedPct);
+                  const poolSlice = (config.tokenomics ?? []).find((t) => t.toPool);
+                  const pct = Math.min(poolTokenPct, availablePct);
+                  const tokensForPool = Math.floor((config.supply.initial * pct) / 100);
+                  const ethNum = Number(poolEthAmount) || 0;
+                  const tokensPerEth = ethNum > 0 ? tokensForPool / ethNum : 0;
+                  const sym = symbol.toUpperCase() || 'TKN';
+                  return (
+                    <div className="bg-amazon-dark/40 p-4 rounded-xl border border-white/5 space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-bold">
+                        <Lock className="w-4 h-4 text-emerald-400" /> Liquidez Inicial (pool)
+                      </div>
+                      {!config.trustSeal.autoLiquidityLock ? (
+                        <p className="text-[11px] text-gray-400 leading-snug">
+                          Para criar a pool e travar a liquidez no lançamento, ligue o <strong className="text-white">"Lock automático de liquidez"</strong> no
+                          passo <strong className="text-white">Configuração</strong> (Selo de Confiança) — é a mesma opção que pontua o Trust Score. Sem ela, o token nasce sem pool (não negociável até você criar uma depois).
+                        </p>
+                      ) : (
+                        <div className="space-y-3 pt-1">
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="block space-y-1">
+                              <span className="text-[10px] text-gray-400">% do supply pra pool (máx {availablePct}%)</span>
+                              <input
+                                type="number"
+                                min={1}
+                                max={availablePct}
+                                value={poolTokenPct}
+                                onChange={(e) => setPoolTokenPct(Math.max(1, Math.min(availablePct, Number(e.target.value))))}
+                                className="w-full px-3 py-2 rounded-lg border glass-input text-xs font-mono"
+                              />
+                            </label>
+                            <label className="block space-y-1">
+                              <span className="text-[10px] text-gray-400">ETH a parear</span>
+                              <input
+                                type="text"
+                                value={poolEthAmount}
+                                onChange={(e) => setPoolEthAmount(e.target.value)}
+                                placeholder="0.05"
+                                className="w-full px-3 py-2 rounded-lg border glass-input text-xs font-mono"
+                              />
+                            </label>
+                          </div>
+                          {poolSlice && (
+                            <button
+                              type="button"
+                              onClick={() => setPoolTokenPct(Math.min(availablePct, poolSlice.percent))}
+                              className="text-[10px] text-amazon-neon hover:underline cursor-pointer"
+                            >
+                              Usar a fatia "→ Pool" do Tokenomics ({poolSlice.percent}%)
+                            </button>
+                          )}
+                          <div className="text-[11px] text-gray-300 font-mono space-y-1 bg-white/5 rounded-lg p-2.5">
+                            <div className="flex justify-between"><span className="text-gray-400">Tokens na pool</span><span>{tokensForPool.toLocaleString('pt-BR')} {sym}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Preço inicial</span><span className="text-amazon-neon">{tokensPerEth > 0 ? `1 ETH ≈ ${Math.round(tokensPerEth).toLocaleString('pt-BR')} ${sym}` : '—'}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Liquidez travada</span><span>{config.trustSeal.liquidityLockDays} dias (keeper Mazari)</span></div>
+                          </div>
+                          <p className="text-[10px] text-amber-400/80 leading-snug">⚠️ Sua carteira precisa de ~{ethNum} ETH (Base Sepolia) + gás pra parear na pool.</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {isDeploying ? (
                   <div className="bg-amazon-dark/80 p-4 rounded-xl border border-white/5 space-y-3.5 pt-4">
                     <div className="flex justify-between items-center text-xs font-mono">
                       <span className="text-amazon-neon animate-pulse font-bold">Deploying...</span>
-                      <span className="text-gray-400">{deployStep * 25}%</span>
+                      <span className="text-gray-400">{Math.round((deployStep * 100) / 6)}%</span>
                     </div>
                     <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                       <div
                         className="bg-gradient-to-r from-amazon-green to-amazon-neon h-full transition-all duration-500"
-                        style={{ width: `${deployStep * 25}%` }}
+                        style={{ width: `${Math.min(100, (deployStep * 100) / 6)}%` }}
                       />
                     </div>
                     <div className="text-[10px] text-gray-300 font-mono text-left space-y-1">
                       {deployStep >= 1 && <div className="text-emerald-400">✓ Compilando contrato musculoso...</div>}
-                      {deployStep >= 2 && <div className="text-emerald-400">✓ Injetando proteções anti-bot/MEV...</div>}
-                      {deployStep >= 3 && <div className="text-emerald-300">✓ Publicando na rede EVM...</div>}
-                      {deployStep >= 4 && <div className="text-amazon-neon">⚡ Registrando fee de protocolo 0,2%...</div>}
+                      {deployStep >= 2 && <div className="text-emerald-400">✓ Publicando token na rede EVM...</div>}
+                      {deployStep >= 3 && <div className="text-emerald-300">✓ Distribuindo supply pras carteiras...</div>}
+                      {deployStep >= 4 && <div className="text-amazon-neon">⚡ Criando pool + travando liquidez (fee 0,2%)...</div>}
+                      {deployStep >= 5 && <div className="text-amazon-neon">🔒 Selo de confiança (renúncia/lock)...</div>}
                     </div>
                   </div>
                 ) : wallet.connected ? (
@@ -1333,7 +1730,7 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
             {!isDeploying && (
               <div className="flex justify-between items-center pt-5 border-t border-white/5">
                 <button
-                  onClick={() => setStep(4)}
+                  onClick={() => setStep(5)}
                   className="flex items-center gap-1 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -1355,10 +1752,12 @@ function StepNav({
   onBack,
   onNext,
   nextLabel = 'Prosseguir',
+  nextDisabled = false,
 }: {
   onBack: () => void;
   onNext: () => void;
   nextLabel?: string;
+  nextDisabled?: boolean;
 }) {
   return (
     <div className="flex justify-between items-center pt-5 border-t border-white/5">
@@ -1371,7 +1770,12 @@ function StepNav({
       </button>
       <button
         onClick={onNext}
-        className="flex items-center gap-2 bg-gradient-to-r from-amazon-green to-amazon-light px-6 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer"
+        disabled={nextDisabled}
+        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+          nextDisabled
+            ? 'bg-white/10 text-gray-500 cursor-not-allowed'
+            : 'bg-gradient-to-r from-amazon-green to-amazon-light cursor-pointer'
+        }`}
       >
         {nextLabel}
         <ChevronRight className="w-4 h-4" />

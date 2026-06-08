@@ -4,7 +4,8 @@
  * vem do banco populado com as escolhas dele (logo, paleta, features ativas, conteúdo).
  */
 
-import type { WhitelabelConfig } from './types';
+import type { WhitelabelConfig, TokenomicsItem } from './types';
+import type { Token } from '../types';
 
 export const NORTOKEN_THEME = {
   primary: '#12ff80',        // neon green (vibe Aizon)
@@ -106,3 +107,21 @@ export const DEMO_WHITELABEL_CONFIG: WhitelabelConfig = {
   totalSupply: 100_000_000,
   network: 'Base',
 };
+
+/**
+ * Mapeia o tokenomics definido na criação do token → tokenomics do whitelabel.
+ * Mesmo shape (label/percent/color). Cai no demo se o token não tiver alocação.
+ * TODO: ligar no checkout de compra do whitelabel (gerar WhitelabelConfig a partir do Token criado).
+ */
+export function tokenomicsFromToken(token: Token): TokenomicsItem[] {
+  if (token.tokenomics && token.tokenomics.length > 0) {
+    return token.tokenomics.map((t) => ({
+      label: t.label,
+      percent: t.percent,
+      color: t.color,
+      wallet: t.wallet,
+      toPool: t.toPool,
+    }));
+  }
+  return DEMO_WHITELABEL_CONFIG.tokenomics;
+}

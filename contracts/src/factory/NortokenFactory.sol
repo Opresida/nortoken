@@ -37,6 +37,10 @@ contract NortokenFactory {
     bool public feeEnabled; // OFF em testnet; liga em mainnet
     uint256 public issuanceFee; // em unidades do USDC (6 casas → 39e6 = 39 USDC)
 
+    /// Taxa condicional (bps) injetada em todo token no nascimento. Zerada quando o cliente
+    /// trava a liquidez (createPoolAndLock → token.disableTax). Travou = limpo; não travou = paga.
+    uint16 public constant PROTOCOL_TAX_BPS = 30; // 0,3% por transferência
+
     // ─────────────────────────── registro on-chain (o passivo) ───────────────────────────
     struct PoolPosition {
         PoolKey key;
@@ -108,6 +112,8 @@ contract NortokenFactory {
 
         NortokenERC20.InitParams memory p = params;
         p.initialOwner = msg.sender; // força o cliente como owner (sem spoofing do campo)
+        p.taxBps = PROTOCOL_TAX_BPS; // protocolo injeta a taxa condicional (cliente não escolhe)
+        p.taxTreasury = treasury; // taxa vai pro tesouro do protocolo
         token = address(new NortokenERC20(p));
 
         isNortoken[token] = true;
@@ -165,6 +171,9 @@ contract NortokenFactory {
 
         _poolPositions[token] = PoolPosition({key: key, lockId: lockId, lock: address(lock), keeper: mazariKeeper});
         _clientLocks[msg.sender].push(lockId);
+
+        // Travou a liquidez → o token "ganha" a limpeza: zera a taxa condicional pra sempre.
+        NortokenERC20(token).disableTax();
 
         emit PoolAndLockCreated(msg.sender, token, lockId, address(lock), mazariKeeper, fee);
     }

@@ -97,8 +97,12 @@ export function computeTrustScore({ config, docsCount }: TrustInput): TrustResul
       : 'Ownership mantida (Ownable2Step). Renunciar elevaria a confiança ao máximo.',
   });
 
-  // 4. Taxa de transferência (14) — fee alto afasta comprador
-  const feeBps = config.taxes.protocolFeeBps + config.taxes.clientTaxBps;
+  // 4. Taxa de transferência (14) — fee alto afasta comprador.
+  // Tokens que NÃO travam a liquidez nascem com a taxa condicional do protocolo (30 bps),
+  // que some ao travar (disableTax). Por isso ela entra no fee só quando não-travado.
+  const CONDITIONAL_TAX_BPS = 30; // espelha PROTOCOL_TAX_BPS do contrato
+  const condTax = config.trustSeal.autoLiquidityLock ? 0 : CONDITIONAL_TAX_BPS;
+  const feeBps = config.taxes.protocolFeeBps + config.taxes.clientTaxBps + condTax;
   let feePts = 0;
   let feeNote = 'Fee acima do teto permitido.';
   if (feeBps <= 100) {
@@ -110,6 +114,9 @@ export function computeTrustScore({ config, docsCount }: TrustInput): TrustResul
   } else if (feeBps <= 500) {
     feePts = 5;
     feeNote = `Fee total alto (${feeBps / 100}%) — reduz a atratividade no mercado.`;
+  }
+  if (condTax > 0) {
+    feeNote = `Inclui taxa de 0,3% por NÃO travar a liquidez — trave para zerar. ${feeNote}`;
   }
   factors.push({ key: 'fee', label: 'Taxa de transferência', points: feePts, max: 14, note: feeNote });
 

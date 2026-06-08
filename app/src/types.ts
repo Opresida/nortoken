@@ -19,6 +19,17 @@ export interface TokenAnalyticsItem {
   holders: number;
 }
 
+/** Item de alocação de supply (tokenomics) — mesmo shape do whitelabel. */
+export interface TokenomicsItem {
+  label: string;
+  percent: number;
+  color: string;
+  /** Carteira de destino (só usada se a distribuição automática estiver ligada). */
+  wallet?: string;
+  /** Esta fatia vai pro POOL de liquidez (não é uma carteira comum). */
+  toPool?: boolean;
+}
+
 /** Categoria do token — parametrizada por segmento (não mais um union fixo amazônico). */
 export type CategoryId = string;
 
@@ -52,6 +63,8 @@ export interface Token {
   onChainChainId?: number;
   /** lockId da pool criada (passo 2). Ausente = ainda sem pool. */
   poolLockId?: string;
+  /** Alocação de supply definida na criação (passo Tokenomics). Off-chain. */
+  tokenomics?: TokenomicsItem[];
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -146,6 +159,9 @@ export interface TokenConfig {
   protections: ProtectionConfig;
   trustSeal: TrustSealConfig;
   taxes: TaxConfig;
+  tokenomics?: TokenomicsItem[];
+  /** Distribuir automaticamente o supply pras carteiras do tokenomics no lançamento (custa gás). */
+  autoDistribute?: boolean;
   presence: PresenceConfig;
 }
 

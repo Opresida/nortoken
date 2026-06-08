@@ -101,6 +101,7 @@ export default function LandingPage({
     { name: 'NortokenFactory', role: 'A linha de montagem — cria o token e a pool de liquidez em um fluxo só.', addr: BASE_SEPOLIA.factory },
     { name: 'MalleableLiquidityLock', role: 'O cofre maleável — liquidez travada (anti-rug), range otimizável, nunca sacável.', addr: BASE_SEPOLIA.lock },
     { name: 'NortokenSwapRouter', role: 'O roteador — compra e venda on-chain com fee transparente.', addr: BASE_SEPOLIA.swapRouter },
+    { name: 'NortokenDisperse', role: 'O distribuidor — envia o supply pras carteiras do tokenomics no lançamento, público e verificável.', addr: BASE_SEPOLIA.disperse },
   ];
 
   return (
