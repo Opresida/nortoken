@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Função serverless da Vercel — Co-Pilot de Tokenização (Gemini), com fallback de
- * simulação quando não há GEMINI_API_KEY. Porta a rota /api/copilot do server.ts
- * (o Express só roda em dev/Render; na Vercel é serverless).
+ * simulação quando não há GEMINI_API_KEY. JS puro (ESM) para a Vercel rodar direto,
+ * sem passar pelo tsconfig do app (que tem noEmit:true).
  */
 import { GoogleGenAI, Type } from '@google/genai';
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -125,8 +125,8 @@ export default async function handler(req: any, res: any) {
 
     const jsonParsed = JSON.parse((response.text || '{}').trim());
     res.json({ ...jsonParsed, mode: 'IA Ativa (Gemini)' });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Gemini error (copilot):', error);
-    res.status(500).json({ error: 'Falha ao se conectar com Assistente de IA.', details: error?.message });
+    res.status(500).json({ error: 'Falha ao se conectar com Assistente de IA.', details: error && error.message });
   }
 }
