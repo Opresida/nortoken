@@ -9,6 +9,8 @@ import TokenizationPage from './pages/Tokenization';
 import BuyPage from './pages/Buy';
 import RoadmapPage from './pages/Roadmap';
 import LendingPage from './pages/Lending';
+import LeaderboardPage from './pages/Leaderboard';
+import TokenomicsPage from './pages/Tokenomics';
 import type { WhitelabelConfig, WhitelabelFeatureKey } from './types';
 import { DEMO_WHITELABEL_CONFIG } from './config';
 
@@ -25,12 +27,14 @@ export default function WhitelabelApp({ config = DEMO_WHITELABEL_CONFIG, onExitD
       case 'home':         return <HomePage config={config} setCurrentPage={setCurrentPage} />;
       case 'whitepaper':   return <WhitepaperPage config={config} />;
       case 'swap':         return <SwapPage config={config} />;
-      case 'stake':        return <StakePage config={config} />;
+      case 'stake':        return <StakePage config={config} setCurrentPage={setCurrentPage} />;
       case 'referral':     return <ReferralPage config={config} />;
       case 'tokenization': return <TokenizationPage config={config} />;
-      case 'buy':          return <BuyPage config={config} />;
+      case 'buy':          return <BuyPage config={config} setCurrentPage={setCurrentPage} />;
       case 'roadmap':      return <RoadmapPage config={config} />;
       case 'lending':      return <LendingPage config={config} />;
+      case 'leaderboard':  return <LeaderboardPage config={config} />;
+      case 'tokenomics':   return <TokenomicsPage config={config} />;
     }
   };
 

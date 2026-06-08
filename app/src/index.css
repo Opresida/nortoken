@@ -114,3 +114,46 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 242, 254, 0.5);
 }
+
+/* ── Whitelabel: efeito de hover dos botões (clone fiel do .aizon-btn) ──
+   No hover, o texto sobe e some enquanto um clone idêntico desliza de baixo. */
+.wl-btn {
+  cursor: pointer;
+  text-align: center;
+  z-index: 0;
+  transition: all .3s;
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+}
+.wl-btn .btn-inner {
+  vertical-align: middle;
+  display: inline-block;
+}
+.wl-btn span {
+  z-index: 11;
+  transition: opacity .6s cubic-bezier(.15, .85, .31, 1), transform .8s cubic-bezier(.15, .85, .31, 1);
+  position: relative;
+}
+.wl-btn span:nth-child(2) {
+  opacity: 0;
+  width: 100%;
+  display: inline-block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 80%);
+}
+.wl-btn:hover .btn-inner,
+.wl-btn:focus .btn-inner {
+  transform: translateY(-150%);
+}
+.wl-btn:hover span:nth-child(2),
+.wl-btn:focus span:nth-child(2) {
+  opacity: 1;
+  transform: translate(-50%, 100%);
+}
+.wl-btn:hover span .btn-normal-text,
+.wl-btn:focus span .btn-normal-text {
+  opacity: 0;
+}

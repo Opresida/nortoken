@@ -7,16 +7,16 @@
 import type { WhitelabelConfig } from './types';
 
 export const NORTOKEN_THEME = {
-  primary: '#10b981',        // amazon-neon
-  primarySoft: '#34d399',    // amazon-light
-  secondary: '#065f46',      // amazon-green
-  background: '#050e18',     // petroleum-dark
-  card: '#0a1d2e',           // petroleum-card
-  deep: '#040912',           // petroleum-deep
-  foreground: '#e5f4ee',
-  accent: '#10b981',
-  fontHeading: '"Space Grotesk", "Inter", sans-serif',
-  fontBody: '"Inter", system-ui, sans-serif',
+  primary: '#12ff80',        // neon green (vibe Aizon)
+  primarySoft: '#5bffab',    // neon green claro
+  secondary: '#032e15',      // verde profundo
+  background: '#050806',     // quase-preto (leve tom verde)
+  card: '#0a130d',           // card verde-escuro
+  deep: '#020403',           // mais profundo
+  foreground: '#e9fff4',
+  accent: '#12ff80',
+  fontHeading: '"Chakra Petch", sans-serif',
+  fontBody: '"Onest", system-ui, sans-serif',
 };
 
 export const DEMO_WHITELABEL_CONFIG: WhitelabelConfig = {
@@ -37,6 +37,16 @@ export const DEMO_WHITELABEL_CONFIG: WhitelabelConfig = {
     buy: true,
     roadmap: true,
     lending: true,  // exibe como "coming soon" mas no menu
+    leaderboard: true,
+    tokenomics: true,
+  },
+
+  presale: {
+    raisedUsd: 412_000,
+    goalUsd: 750_000,
+    priceUsd: 0.042,
+    nextPriceUsd: 0.05,
+    endsAt: '2026-07-20T00:00:00Z',
   },
 
   tokenomics: [

@@ -13,7 +13,9 @@ export type WhitelabelFeatureKey =
   | 'tokenization'
   | 'buy'
   | 'roadmap'
-  | 'lending';
+  | 'lending'
+  | 'leaderboard'
+  | 'tokenomics';
 
 export interface WhitelabelTheme {
   primary: string;        // ex: '#10b981'  (amazon-neon)
@@ -68,6 +70,14 @@ export interface ReferralTier {
   description: string;
 }
 
+export interface PresaleInfo {
+  raisedUsd: number;    // já arrecadado
+  goalUsd: number;      // meta da rodada
+  priceUsd: number;     // preço atual do token
+  nextPriceUsd: number; // preço da próxima rodada (cria urgência)
+  endsAt: string;       // ISO — fim da rodada (contador regressivo)
+}
+
 export interface WhitelabelConfig {
   projectName: string;        // 'Nortoken'
   tokenSymbol: string;        // 'NORTKN'
@@ -80,6 +90,7 @@ export interface WhitelabelConfig {
   features: Record<WhitelabelFeatureKey, boolean>;
 
   // dados das páginas
+  presale?: PresaleInfo;
   tokenomics: TokenomicsItem[];
   stakePools: StakePool[];
   nftCollection: NFTCollectionItem[];
