@@ -123,12 +123,24 @@ export default function Dashboard({
     }
   };
 
+  // Abre o modal da pool (passo 2) já pré-preenchido com a sugestão dada na Revisão do criador.
+  const openPoolModal = () => {
+    const hint = selectedToken?.poolSeedHint;
+    if (hint && selectedToken) {
+      const tokens = Math.floor((selectedToken.supply * hint.tokenPct) / 100);
+      if (tokens > 0) setSeedTokens(tokens);
+      if (hint.ethAmount > 0) setSeedEth(hint.ethAmount);
+    }
+    setPoolOpen(true);
+  };
+
   // DMINT só aparece se o token for mintável (respeita a escolha do cliente no deploy).
   const showMint =
     !selectedToken?.config ||
     (selectedToken.config.supply.mintable && !selectedToken.config.supply.renounceMintAtLaunch);
 
-  // Token real on-chain → temos link de explorer e o contrato vem verificado por bytecode.
+  // Token real on-chain → temos link de explorer; a verificação do source na BaseScan é
+  // submetida via API logo após o deploy (status em selectedToken.verificationStatus).
   const isOnChain = !!selectedToken?.onChainChainId;
   const explorerUrl = isOnChain ? `${BASE_SEPOLIA.explorer}/address/${selectedToken?.contractAddress}` : '';
 
@@ -406,22 +418,42 @@ export default function Dashboard({
                   )}
                 </div>
                 {isOnChain && (
-                  <a
-                    href={explorerUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 cursor-pointer"
-                  >
-                    <ExternalLink className="w-3 h-3" /> ver no BaseScan
-                  </a>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href={explorerUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3 h-3" /> ver no BaseScan
+                    </a>
+                    {selectedToken?.verificationStatus === 'verified' ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-mono">
+                        <ShieldCheck className="w-3 h-3" /> Source verificado
+                      </span>
+                    ) : selectedToken?.verificationStatus === 'failed' ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-amber-400/90 font-mono" title="Tente novamente ou verifique a chave do explorer no servidor.">
+                        <Info className="w-3 h-3" /> Source não verificado
+                      </span>
+                    ) : selectedToken?.verificationStatus === 'pending' ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-gray-400 font-mono animate-pulse">
+                        <Info className="w-3 h-3" /> Verificando source…
+                      </span>
+                    ) : null}
+                  </div>
                 )}
               </div>
               <div className="space-y-1">
                 <span className="text-gray-400 text-[10px] uppercase block">Criado em:</span>
                 <span className="text-white text-[11px] block">{new Date(selectedToken.createdAt).toLocaleDateString('pt-BR')}</span>
-                {isOnChain && (
+                {isOnChain && selectedToken?.verificationStatus === 'verified' && (
                   <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400">
-                    <ShieldCheckIcon className="w-3 h-3" /> contrato verificado
+                    <ShieldCheckIcon className="w-3 h-3" /> source verificado na BaseScan
+                  </span>
+                )}
+                {isOnChain && selectedToken?.verificationStatus !== 'verified' && (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
+                    <ShieldCheckIcon className="w-3 h-3" /> {selectedToken?.verificationStatus === 'pending' ? 'verificando source…' : 'source não verificado'}
                   </span>
                 )}
               </div>
@@ -479,14 +511,23 @@ export default function Dashboard({
 
               {/* Passo 2 — Crie sua pool (só para tokens reais on-chain sem pool) */}
               {canCreatePool && (
-                <button
-                  id="create-pool-btn"
-                  onClick={() => setPoolOpen(true)}
-                  className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-amazon-neon text-petroleum-dark px-5 py-2.5 rounded-xl font-extrabold text-xs font-mono uppercase transition-all hover:shadow-[0_0_24px_rgba(56,189,108,0.45)] cursor-pointer"
-                >
-                  <ArrowRightLeft className="w-4 h-4" />
-                  Crie sua pool · ganhe passivo
-                </button>
+                <>
+                  <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 px-4 py-2.5 rounded-xl text-xs font-semibold font-mono">
+                    <Info className="w-4 h-4" />
+                    Token lançado · pool pendente
+                    {selectedToken.config?.trustSeal.autoLiquidityLock
+                      ? ` · liquidez a travar ${selectedToken.config.trustSeal.liquidityLockDays}d`
+                      : ' · sem lock (taxa 0,3%)'}
+                  </span>
+                  <button
+                    id="create-pool-btn"
+                    onClick={openPoolModal}
+                    className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-amazon-neon text-petroleum-dark px-5 py-2.5 rounded-xl font-extrabold text-xs font-mono uppercase transition-all hover:shadow-[0_0_24px_rgba(56,189,108,0.45)] cursor-pointer"
+                  >
+                    <ArrowRightLeft className="w-4 h-4" />
+                    Criar pool agora · ganhe passivo
+                  </button>
+                </>
               )}
               {selectedToken.poolLockId && (
                 <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-2.5 rounded-xl text-xs font-semibold font-mono">

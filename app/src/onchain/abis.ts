@@ -6,31 +6,36 @@
  * para o viem inferir os tipos dos args a partir da ABI.
  */
 
+/**
+ * Tupla NortokenERC20.InitParams — usada tanto no createToken da factory quanto para
+ * ABI-encodar os args de construtor na verificação do source na BaseScan. A ordem/tipos
+ * espelham EXATAMENTE o struct do contrato (qualquer divergência quebra a verificação).
+ */
+export const INIT_PARAMS_TUPLE = {
+  name: 'params',
+  type: 'tuple',
+  components: [
+    { name: 'name', type: 'string' },
+    { name: 'symbol', type: 'string' },
+    { name: 'initialSupply', type: 'uint256' },
+    { name: 'maxCap', type: 'uint256' },
+    { name: 'mintable', type: 'bool' },
+    { name: 'initialOwner', type: 'address' },
+    { name: 'antiSnipeBlocks', type: 'uint64' },
+    { name: 'tradeCooldownSec', type: 'uint64' },
+    { name: 'maxWalletBps', type: 'uint16' },
+    { name: 'maxTxBps', type: 'uint16' },
+    { name: 'taxBps', type: 'uint16' },
+    { name: 'taxTreasury', type: 'address' },
+  ],
+} as const;
+
 export const FACTORY_ABI = [
   {
     type: 'function',
     name: 'createToken',
     stateMutability: 'nonpayable',
-    inputs: [
-      {
-        name: 'params',
-        type: 'tuple',
-        components: [
-          { name: 'name', type: 'string' },
-          { name: 'symbol', type: 'string' },
-          { name: 'initialSupply', type: 'uint256' },
-          { name: 'maxCap', type: 'uint256' },
-          { name: 'mintable', type: 'bool' },
-          { name: 'initialOwner', type: 'address' },
-          { name: 'antiSnipeBlocks', type: 'uint64' },
-          { name: 'tradeCooldownSec', type: 'uint64' },
-          { name: 'maxWalletBps', type: 'uint16' },
-          { name: 'maxTxBps', type: 'uint16' },
-          { name: 'taxBps', type: 'uint16' },
-          { name: 'taxTreasury', type: 'address' },
-        ],
-      },
-    ],
+    inputs: [INIT_PARAMS_TUPLE],
     outputs: [{ name: 'token', type: 'address' }],
   },
   {
@@ -140,6 +145,22 @@ export const TOKEN_ABI = [
     stateMutability: 'view',
     inputs: [{ name: 'account', type: 'address' }],
     outputs: [{ name: '', type: 'uint256' }],
+  },
+  // taxa condicional injetada pela factory no deploy — lidas pra reconstruir os args de
+  // construtor exatos na verificação do source (a factory injeta, o app não conhece a priori).
+  {
+    type: 'function',
+    name: 'taxBps',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint16' }],
+  },
+  {
+    type: 'function',
+    name: 'taxTreasury',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'address' }],
   },
 ] as const;
 

@@ -34,14 +34,16 @@ import { ChevronDown } from 'lucide-react';
 import TrustBadge from './TrustBadge';
 import { IS_TESTNET } from '../onchain/env';
 import { useDeployer } from '../onchain/useDeployer';
-import { toInitParams, toPoolAndLockArgs, type Address } from '../onchain/configMapper';
-import { BASE_SEPOLIA, NETWORK_LIVE, ZERO_ADDRESS } from '../onchain/deployments';
+import { toInitParams, type Address } from '../onchain/configMapper';
+import { submitTokenVerification } from '../onchain/verify';
+import { BASE_SEPOLIA, NETWORK_LIVE } from '../onchain/deployments';
 import { isAddress, parseEther } from 'viem';
 
 interface TokenCreatorProps {
   wallet: UserWallet;
   connectWallet: () => void;
   onTokenCreated: (newToken: Token) => void;
+  onVerificationUpdate?: (tokenId: string, status: 'pending' | 'verified' | 'failed') => void;
   setTab: (tab: string) => void;
 }
 
@@ -276,7 +278,7 @@ function TokenomicsEditor({
   );
 }
 
-export default function TokenCreator({ wallet, connectWallet, onTokenCreated, setTab }: TokenCreatorProps) {
+export default function TokenCreator({ wallet, connectWallet, onTokenCreated, onVerificationUpdate, setTab }: TokenCreatorProps) {
   const preset = ACTIVE_PRESET;
 
   // Steps: 1 Segmento · 2 Identidade+IA · 3 Configuração · 4 Documentos · 5 Revisão/Deploy
@@ -508,11 +510,6 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
 
   // ── Deploy REAL (passo 1: criar o token on-chain via Privy + viem) ──
   const startRealDeploy = async () => {
-    // Integridade: se o Selo prometeu lock de liquidez, exigir ETH > 0 pra DE FATO travar (score = realidade).
-    if (config.trustSeal.autoLiquidityLock && !(Number(poolEthAmount) > 0)) {
-      alert('Você ativou o "Lock de liquidez" no Selo de Confiança. Informe o ETH a parear na Revisão para criar e travar a pool — ou desligue o lock na Configuração.');
-      return;
-    }
     setIsDeploying(true);
     setDeployStep(1);
     try {
@@ -534,27 +531,13 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
         }
       }
 
-      // Passo 2 — criar pool + travar (Uniswap V4 + keeper Mazari). Acionado pela ÚNICA
-      // fonte de verdade do lock: o Selo de Confiança (autoLiquidityLock), que pontua o Trust Score.
-      let poolLockId: string | undefined;
-      if (config.trustSeal.autoLiquidityLock) {
-        setDeployStep(4);
-        const tokenAmount = parseEther(String(Math.floor((config.supply.initial * poolTokenPct) / 100)));
-        const anchorAmount = parseEther(String(poolEthAmount || '0'));
-        const args = toPoolAndLockArgs(config, ZERO_ADDRESS, {
-          tokenAmount,
-          anchorAmount,
-          anchorIsToken0: true, // ETH (0x0) é currency0
-        });
-        const { lockId } = await deployer.createPoolAndLock(token, args, anchorAmount);
-        poolLockId = lockId.toString();
-      }
+      // PASSO 2 (pool + lock + renúncia) NÃO acontece aqui: o token lança sozinho e a pool é
+      // criada DEPOIS, no Dashboard ("Crie sua pool"). O lock só pode existir após a pool —
+      // por isso a renúncia também fica pro passo 2 (renunciar antes travaria o setExempt).
+      const poolLockId: string | undefined = undefined;
 
-      // Renúncia de ownership — SEMPRE por último (depois da pool, senão trava setExempt)
-      if (config.trustSeal.renounceOwnership) {
-        setDeployStep(5);
-        await deployer.renounceOwnership(token);
-      }
+      // Verificação automática do source na BaseScan — passo de selo de confiança.
+      setDeployStep(4);
 
       setDeployStep(6);
       const newToken: Token = {
@@ -575,6 +558,7 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
         createdAt: new Date().toISOString(),
         creatorWallet: wallet.address,
         verified: false,
+        verificationStatus: 'pending', // verify na BaseScan dispara logo após o deploy
         premiumServices: contractedServices,
         analytics: [{ date: 'Hoje', volume: 0, price: 1.0, holders: 1 }],
         config,
@@ -583,10 +567,19 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
         presetId: preset.id,
         trustScore: trust.score,
         onChainChainId: BASE_SEPOLIA.chainId, // marca como token REAL on-chain
-        poolLockId, // setado se criou pool → vira comprável no Mercado
+        poolLockId, // ausente no lançamento → Dashboard mostra "Crie sua pool" (passo 2)
+        // sugestão de semeadura levada pro passo 2 (Dashboard) — cliente não redigita
+        poolSeedHint: { tokenPct: poolTokenPct, ethAmount: Number(poolEthAmount) || 0 },
       };
       onTokenCreated(newToken);
       console.log(`[Nortoken] token real: ${BASE_SEPOLIA.explorer}/address/${token} (tx ${hash})`);
+
+      // Verifica o source na BaseScan em background — não bloqueia o sucesso do lançamento.
+      // O badge do token no Dashboard atualiza quando confirma (verde) ou falha.
+      void submitTokenVerification(token, initParams, wallet.address as Address).then((status) =>
+        onVerificationUpdate?.(newToken.id, status),
+      );
+
       setIsDeploying(false);
       setStep(1);
       setTab('dashboard');
@@ -1182,19 +1175,19 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                   <ShieldCheck className="w-4 h-4 text-emerald-400" /> Selo de Confiança
                 </div>
                 <Toggle
-                  label="Lock automático de liquidez"
-                  hint="Cria a pool e TRAVA a liquidez no lançamento (anti-rug, keeper Mazari). É ISTO que conta no Trust Score. SEM travar, o token nasce com 0,3% de taxa em toda negociação (Nortoken) — travar zera a taxa."
+                  label="Compromisso de lock de liquidez"
+                  hint="Compromisso de travar a liquidez por N dias (anti-rug, keeper Mazari) — APLICADO quando você criar a pool (passo 2, no Dashboard, logo após o lançamento). É ISTO que conta no Trust Score: pool travada zera a taxa de 0,3% por swap; pool sem travar nasce com a taxa Nortoken."
                   on={config.trustSeal.autoLiquidityLock}
                   onChange={v => setSeal({ autoLiquidityLock: v })}
                 />
                 {!config.trustSeal.autoLiquidityLock && (
                   <p className="text-[10px] text-amber-400/80 leading-snug">
-                    ⚠️ Liquidez NÃO travada → seu token terá <strong>0,3% de taxa</strong> em todas as transferências (vai pra Nortoken) e <strong>Trust Score menor</strong>. Trave a liquidez pra um token 100% limpo.
+                    ⚠️ Sem o compromisso de lock, quando você criar a pool ela nascerá com <strong>0,3% de taxa</strong> por swap (vai pra Nortoken) e <strong>Trust Score menor</strong>. O token lança normalmente nos dois casos; a pool é o passo 2.
                   </p>
                 )}
                 {config.trustSeal.autoLiquidityLock && (
                   <label className="space-y-1 block">
-                    <span className="text-[10px] uppercase text-gray-400">Dias de lock</span>
+                    <span className="text-[10px] uppercase text-gray-400">Dias de lock (aplicado na criação da pool)</span>
                     <input
                       type="number"
                       value={config.trustSeal.liquidityLockDays}
@@ -1617,7 +1610,7 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                   </div>
                 </div>
 
-                {/* Liquidez Inicial — passo 2 (criar pool + lock), opcional */}
+                {/* Liquidez Inicial — sugestão pro passo 2 (criar pool + lock no Dashboard) */}
                 {(() => {
                   const distributedPct = config.autoDistribute
                     ? (config.tokenomics ?? [])
@@ -1634,15 +1627,17 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                   return (
                     <div className="bg-amazon-dark/40 p-4 rounded-xl border border-white/5 space-y-3">
                       <div className="flex items-center gap-2 text-sm font-bold">
-                        <Lock className="w-4 h-4 text-emerald-400" /> Liquidez Inicial (pool)
+                        <Lock className="w-4 h-4 text-emerald-400" /> Liquidez Inicial · <span className="text-emerald-400">passo 2 (pós-lançamento)</span>
                       </div>
                       {!config.trustSeal.autoLiquidityLock ? (
                         <p className="text-[11px] text-gray-400 leading-snug">
-                          Para criar a pool e travar a liquidez no lançamento, ligue o <strong className="text-white">"Lock automático de liquidez"</strong> no
-                          passo <strong className="text-white">Configuração</strong> (Selo de Confiança) — é a mesma opção que pontua o Trust Score. Sem ela, o token nasce sem pool (não negociável até você criar uma depois).
+                          O token <strong className="text-white">lança sozinho agora</strong>; a pool é o <strong className="text-white">passo 2</strong>, criado depois no <strong className="text-white">Dashboard</strong> ("Crie sua pool"). Ligue o <strong className="text-white">"Compromisso de lock de liquidez"</strong> no passo <strong className="text-white">Configuração</strong> pra, ao criar a pool, travar a liquidez e <strong className="text-white">zerar a taxa de 0,3%</strong> (e pontuar o Trust Score).
                         </p>
                       ) : (
                         <div className="space-y-3 pt-1">
+                          <p className="text-[10px] text-gray-400 leading-snug">
+                            Sugestão pré-preenchida no <strong className="text-white">passo 2</strong> (Dashboard). A pool e o lock NÃO são criados agora — o token lança primeiro, e você cria a pool logo depois.
+                          </p>
                           <div className="grid grid-cols-2 gap-3">
                             <label className="block space-y-1">
                               <span className="text-[10px] text-gray-400">% do supply pra pool (máx {availablePct}%)</span>
@@ -1678,9 +1673,9 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                           <div className="text-[11px] text-gray-300 font-mono space-y-1 bg-white/5 rounded-lg p-2.5">
                             <div className="flex justify-between"><span className="text-gray-400">Tokens na pool</span><span>{tokensForPool.toLocaleString('pt-BR')} {sym}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">Preço inicial</span><span className="text-amazon-neon">{tokensPerEth > 0 ? `1 ETH ≈ ${Math.round(tokensPerEth).toLocaleString('pt-BR')} ${sym}` : '—'}</span></div>
-                            <div className="flex justify-between"><span className="text-gray-400">Liquidez travada</span><span>{config.trustSeal.liquidityLockDays} dias (keeper Mazari)</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Lock ao criar a pool</span><span>{config.trustSeal.liquidityLockDays} dias (keeper Mazari)</span></div>
                           </div>
-                          <p className="text-[10px] text-amber-400/80 leading-snug">⚠️ Sua carteira precisa de ~{ethNum} ETH (Base Sepolia) + gás pra parear na pool.</p>
+                          <p className="text-[10px] text-amber-400/80 leading-snug">⚠️ No <strong>passo 2</strong> (Dashboard) sua carteira vai precisar de ~{ethNum} ETH (Base Sepolia) + gás pra criar e travar a pool.</p>
                         </div>
                       )}
                     </div>
@@ -1703,8 +1698,8 @@ export default function TokenCreator({ wallet, connectWallet, onTokenCreated, se
                       {deployStep >= 1 && <div className="text-emerald-400">✓ Compilando contrato musculoso...</div>}
                       {deployStep >= 2 && <div className="text-emerald-400">✓ Publicando token na rede EVM...</div>}
                       {deployStep >= 3 && <div className="text-emerald-300">✓ Distribuindo supply pras carteiras...</div>}
-                      {deployStep >= 4 && <div className="text-amazon-neon">⚡ Criando pool + travando liquidez (fee 0,2%)...</div>}
-                      {deployStep >= 5 && <div className="text-amazon-neon">🔒 Selo de confiança (renúncia/lock)...</div>}
+                      {deployStep >= 4 && <div className="text-amazon-neon">🔎 Verificando source na BaseScan...</div>}
+                      {deployStep >= 6 && <div className="text-emerald-400">✓ Token no ar — crie a pool no Dashboard (passo 2)</div>}
                     </div>
                   </div>
                 ) : wallet.connected ? (

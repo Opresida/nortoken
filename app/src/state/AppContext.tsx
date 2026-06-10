@@ -77,6 +77,7 @@ interface AppContextValue {
   // Mutações de tokens / wallet
   handleTokenCreated: (newToken: Token) => void;
   handlePoolCreated: (tokenId: string, lockId: string) => void;
+  handleTokenVerification: (tokenId: string, status: 'pending' | 'verified' | 'failed') => void;
   handleAddDocument: (tokenId: string, doc: TokenDocument) => void;
   handleServicePurchased: (tokenId: string, serviceId: string) => void;
   handleMintMore: (tokenId: string, extraAmount: number) => void;
@@ -179,6 +180,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTokens(prev => prev.map(t => (t.id === tokenId ? { ...t, poolLockId: lockId } : t)));
   };
 
+  // Atualiza o status da verificação do source na BaseScan (disparada pós-deploy).
+  const handleTokenVerification = (tokenId: string, status: 'pending' | 'verified' | 'failed') => {
+    setTokens(prev =>
+      prev.map(t => (t.id === tokenId ? { ...t, verificationStatus: status, verified: status === 'verified' ? true : t.verified } : t)),
+    );
+  };
+
   // Adiciona um documento a um token já criado (upload posterior)
   const handleAddDocument = (tokenId: string, doc: TokenDocument) => {
     setTokens(prev => prev.map(t => (t.id === tokenId ? { ...t, documents: [...t.documents, doc] } : t)));
@@ -277,6 +285,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     handleOnboardingSkip,
     handleTokenCreated,
     handlePoolCreated,
+    handleTokenVerification,
     handleAddDocument,
     handleServicePurchased,
     handleMintMore,

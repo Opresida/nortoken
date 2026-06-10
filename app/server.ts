@@ -5,6 +5,7 @@
 
 import express from 'express';
 import path from 'path';
+import { readFileSync } from 'fs';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
@@ -151,6 +152,74 @@ app.post('/api/copilot', async (req, res) => {
       error: 'Falha ao se conectar com Assistente de IA.',
       details: error.message
     });
+  }
+});
+
+// API: verificação do source do token na BaseScan (espelha api/verify-token.js da Vercel).
+// Chave server-side; dois modos: submeter ({ tokenAddress, constructorArgs }) ou checar ({ guid }).
+const ETHERSCAN_V2 = 'https://api.etherscan.io/v2/api';
+const COMPILER_VERSION = 'v0.8.26+commit.8a97fa7a';
+const CONTRACT_NAME = 'src/token/NortokenERC20.sol:NortokenERC20';
+const DEFAULT_CHAIN_ID = 84532;
+let STANDARD_JSON_STR = '';
+const loadStandardJson = () => {
+  if (!STANDARD_JSON_STR) {
+    STANDARD_JSON_STR = readFileSync(path.join(process.cwd(), 'api/_verify/NortokenERC20.standard.json'), 'utf8');
+  }
+  return STANDARD_JSON_STR;
+};
+const verifyApiKey = () => process.env.ETHERSCAN_API_KEY || process.env.BASESCAN_API_KEY || '';
+const verifyDelay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function checkVerifyStatus(chainId: number, guid: string, key: string) {
+  const url = `${ETHERSCAN_V2}?chainid=${chainId}&module=contract&action=checkverifystatus&guid=${encodeURIComponent(guid)}&apikey=${key}`;
+  const r: any = await fetch(url).then((x) => x.json());
+  const result = String(r?.result ?? '');
+  if (/pass\s*-\s*verified/i.test(result) || /already verified/i.test(result)) return { status: 'verified', message: result };
+  if (/fail/i.test(result)) return { status: 'failed', message: result };
+  return { status: 'pending', message: result || 'Em fila na BaseScan.' };
+}
+
+app.post('/api/verify-token', async (req, res) => {
+  const key = verifyApiKey();
+  if (!key) {
+    return res.status(200).json({ status: 'failed', message: 'ETHERSCAN_API_KEY/BASESCAN_API_KEY não configurada no servidor.' });
+  }
+  const { tokenAddress, constructorArgs, guid, chainId = DEFAULT_CHAIN_ID } = req.body || {};
+  try {
+    if (guid) {
+      return res.status(200).json({ ...(await checkVerifyStatus(chainId, guid, key)), guid });
+    }
+    if (!tokenAddress) {
+      return res.status(400).json({ status: 'failed', message: 'tokenAddress é obrigatório.' });
+    }
+    const body = new URLSearchParams();
+    body.set('apikey', key);
+    body.set('module', 'contract');
+    body.set('action', 'verifysourcecode');
+    body.set('codeformat', 'solidity-standard-json-input');
+    body.set('contractaddress', tokenAddress);
+    body.set('contractname', CONTRACT_NAME);
+    body.set('compilerversion', COMPILER_VERSION);
+    body.set('sourceCode', loadStandardJson());
+    body.set('constructorArguements', String(constructorArgs || '').replace(/^0x/, ''));
+
+    const sub: any = await fetch(`${ETHERSCAN_V2}?chainid=${chainId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    }).then((x) => x.json());
+
+    if (String(sub?.status) !== '1') {
+      const msg = String(sub?.result ?? sub?.message ?? 'Falha ao submeter.');
+      const already = /already verified/i.test(msg);
+      return res.status(200).json({ status: already ? 'verified' : 'failed', message: msg });
+    }
+    const newGuid = sub.result;
+    await verifyDelay(4000);
+    return res.status(200).json({ ...(await checkVerifyStatus(chainId, newGuid, key)), guid: newGuid });
+  } catch (e: any) {
+    return res.status(200).json({ status: 'failed', message: e?.message || String(e) });
   }
 });
 
