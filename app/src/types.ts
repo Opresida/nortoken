@@ -63,6 +63,10 @@ export interface Token {
   onChainChainId?: number;
   /** lockId da pool criada (passo 2). Ausente = ainda sem pool. */
   poolLockId?: string;
+  /** Sugestão de semeadura da pool definida na Revisão — pré-preenche o passo 2 (Dashboard). */
+  poolSeedHint?: { tokenPct: number; ethAmount: number };
+  /** Status da verificação do source na BaseScan (passo automático pós-deploy). */
+  verificationStatus?: 'pending' | 'verified' | 'failed';
   /** Alocação de supply definida na criação (passo Tokenomics). Off-chain. */
   tokenomics?: TokenomicsItem[];
 }

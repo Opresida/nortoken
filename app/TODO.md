@@ -2,7 +2,7 @@
 
 Lista detalhada do que está pronto e do que falta para **pleno funcionamento** (do estado sandbox/demo atual até a plataforma rodando em produção com clientes reais).
 
-**Última atualização:** 2026-05-21
+**Última atualização:** 2026-06-10
 
 > Documento vivo. Marcar `[x]` quando concluir, não remover (histórico preservado).
 
@@ -104,6 +104,25 @@ Lista detalhada do que está pronto e do que falta para **pleno funcionamento** 
 - [x] `TODO.md` criado: este arquivo
 - [x] `CLAUDE.md` criado: pacote portátil pra IA em qualquer máquina
 
+### Fase 6 (parcial) — On-chain REAL em testnet (Base Sepolia) — repo standalone + Vercel
+
+- [x] Migração da cópia viva pro repo standalone `Opresida/nortoken` (deploy Vercel)
+- [x] Carteira Web3 real com **Privy** (`VITE_WALLET_MODE=testnet`)
+- [x] Contratos v4 deployados na Base Sepolia: Factory, MalleableLiquidityLock, MazariSwapHookV3, NortokenERC20, NortokenSwapRouter, NortokenDisperse
+- [x] **Passo 1 — `createToken`**: deploy real do token (cliente vira owner)
+- [x] **Passo 2 — `createPoolAndLock`** no Dashboard: pool V4 + lock de liquidez (keeper Mazari) + taxa do cliente
+- [x] Distribuição opcional do supply no lançamento (`NortokenDisperse`)
+- [x] Compra/venda real no Marketplace (`NortokenSwapRouter` + leitura de preço `StateView`)
+- [x] **Taxa condicional 0,3%** (capada 5%, honeypot-free) que zera ao travar a liquidez
+
+### 2026-06-10 — Desacoplar lock×pool + verificação automática na BaseScan
+
+- [x] **Decoupling lock × pool:** `startRealDeploy` só cria o token; pool/lock/renúncia viraram o passo 2 no Dashboard. Marcar o lock não quebra mais o lançamento.
+- [x] Copy honesta: toggle "Compromisso de lock — aplicado ao criar a pool"; estado "pool pendente" explícito; `poolSeedHint` pré-preenche o passo 2.
+- [x] **Verificação automática na BaseScan:** endpoint server-side `/api/verify-token` (função Vercel + rota no `server.ts`), Standard JSON Input em `api/_verify/`, Etherscan V2, polling. Badge "Verificando… → Source verificado".
+- [x] Removidas as 2 afirmações falsas de "verificado" na UI.
+- [x] `ETHERSCAN_API_KEY` documentada no `.env.example` (configurada local + Vercel).
+
 ---
 
 ## ❌ Pendente para pleno funcionamento
@@ -186,9 +205,9 @@ Lista detalhada do que está pronto e do que falta para **pleno funcionamento** 
 
 ---
 
-### 🔴 Fase 6 — Wallet Web3 real + Deploy on-chain
+### 🟢 Fase 6 — Wallet Web3 real + Deploy on-chain — **FEITO EM TESTNET** (mainnet pendente)
 
-**Por quê:** atualmente a wallet é fake (`NoRtOkEn...`) e o deploy é mockado. Pra plataforma "fazer o que promete" precisa conectar carteira de verdade e deployar tokens reais.
+**Status:** o núcleo EVM está **pronto e ativo na Base Sepolia** (ver seção "✅ Concluído"). Falta: mainnet (após auditoria), Solana (descontinuado por ora) e NFT/stake/referral on-chain. Itens originais abaixo, com o que já saiu marcado.
 
 #### Wallet
 - [ ] Decidir: Privy vs WalletConnect vs RainbowKit
@@ -209,12 +228,12 @@ Lista detalhada do que está pronto e do que falta para **pleno funcionamento** 
 - [ ] Suporte a metadata Metaplex (logo, descrição on-chain)
 
 #### Deploy de token EVM
-- [ ] `viem` + `wagmi`
-- [ ] Smart contract ERC-20 padronizado (auditado)
-- [ ] Função `deployTokenEvm(network, params)`:
-  - [ ] Network: Ethereum, Polygon, BSC, Base
-  - [ ] Deploy via cliente (cliente paga gas)
-- [ ] Verificar contrato no Etherscan/Polygonscan automaticamente
+- [x] `viem` (+ Privy no lugar de wagmi)
+- [x] Smart contract ERC-20 padronizado (NortokenERC20 — falta auditoria externa pra mainnet)
+- [x] Função de deploy via factory (`createToken`) — Base Sepolia, cliente paga gas
+  - [x] Network: **Base** (Sepolia) ✅ · [ ] Ethereum/Polygon/BSC (futuro)
+  - [x] Deploy via cliente (cliente paga gas)
+- [x] **Verificar contrato no Etherscan/BaseScan automaticamente** (Etherscan V2, `/api/verify-token`)
 
 #### NFT Collection
 - [ ] Padrão ERC-721 (EVM) ou Metaplex NFT (Solana)
@@ -403,6 +422,10 @@ Quando estiver em produção, monitorar:
 
 | Data | Mudança principal |
 |---|---|
+| 2026-06-10 | Docs canônicos alinhados ao estado on-chain real (testnet) + repo standalone Vercel |
+| 2026-06-10 | Verificação automática do source na BaseScan (`/api/verify-token`, Etherscan V2) |
+| 2026-06-10 | Desacoplamento lock×pool: token lança sozinho, pool/lock viram o passo 2 no Dashboard |
+| 2026-06 | On-chain REAL na Base Sepolia: Privy + trio v4 (factory/lock/hook) + router + disperse + taxa condicional |
 | 2026-05-21 | Documentação completa criada (README, CONTEXT, PROJECT_CONTEXT, ARCHITECTURE, TODO, CLAUDE) |
 | 2026-05-21 | Plataforma Whitelabel demo com 9 páginas (Home, Whitepaper, Swap, Stake, Referral, Tokenization, Buy, Roadmap, Lending) |
 | 2026-05-21 | Etapa 1 do Enterprise refinada: "Plataforma Whitelabel & Contratos" (US$ 6.300, total package US$ 53.340) |

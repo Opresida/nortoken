@@ -14,16 +14,21 @@ nortoken/
 └── app/         # React 19 + Vite + Privy + viem — wizard, dashboard, marketplace
 ```
 
-## Contratos (Base Sepolia, testnet — verificados)
+## Contratos (Base Sepolia, testnet — verificados na BaseScan)
+
+Trio v4 ATIVO (com **taxa condicional 0,3%** que zera ao travar a liquidez). Fonte viva: [`app/src/onchain/deployments.ts`](app/src/onchain/deployments.ts).
 
 | Contrato | Endereço | Papel |
 |---|---|---|
-| MazariSwapHookV3 | `0xDA4e860FFD739F8A63851E19Be1AafA5D8B480CC` | fee 0,2% protocolo + taxa do cliente por-pool, no âncora |
-| MalleableLiquidityLock | `0x10ee52ad60b5b8a0d6bec6F31D49a466e423e9c2` | principal travado + range ajustável por keeper (nunca saca) |
-| NortokenFactory | `0xB6BcE4CaCF4285e64de79Bcbf5Aee69cC65c9C78` | createToken (passo 1) + createPoolAndLock (passo 2) |
+| MazariSwapHookV3 | `0xA39cb2daE62F788195CCdB147155eae9915580CC` | fee 0,2% protocolo + taxa do cliente por-pool |
+| MalleableLiquidityLock | `0x82644C1BCA7dB9707C77f6eA8A4984624d350f45` | principal travado + range ajustável por keeper (nunca saca) |
+| NortokenFactory | `0x08De01b7A9a31357f85411Cc526A972E3b1B9917` | createToken (passo 1) + createPoolAndLock (passo 2) |
 | NortokenSwapRouter | `0xC97b1bc7Bc1D14b6AEfd6BeDa3580564E092BCDa` | compra/venda nas pools (lado comprador) |
+| NortokenDisperse | `0x8D4bF383051AF366ba76b1ce770B05b28AD6E11e` | distribuição opcional do supply no lançamento |
 
 Endereços canônicos V4 + detalhes em `contracts/addresses.json`.
+
+> **Fluxo em 2 passos (separado):** o cliente **lança o token primeiro** (`createToken`) e **cria a pool depois** (`createPoolAndLock`, no Dashboard) — o lock de liquidez se efetiva na criação da pool. Todo token lançado é **verificado automaticamente na BaseScan** (Etherscan V2, `app/api/verify-token`).
 
 ## Rodar
 

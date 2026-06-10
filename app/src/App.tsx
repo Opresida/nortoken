@@ -40,6 +40,7 @@ function Shell() {
     handleOnboardingSkip,
     handleTokenCreated,
     handlePoolCreated,
+    handleTokenVerification,
     handleAddDocument,
     handleServicePurchased,
     handleMintMore,
@@ -86,6 +87,7 @@ function Shell() {
               wallet={wallet}
               connectWallet={connectWallet}
               onTokenCreated={handleTokenCreated}
+              onVerificationUpdate={handleTokenVerification}
               setTab={navigateTab}
             />
           </Route>

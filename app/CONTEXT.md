@@ -4,6 +4,18 @@ Regras, stack, design system e lógica de negócio. **Leia antes de fazer qualqu
 
 ---
 
+## 🟢 Atualização 2026-06-10 (on-chain real + regras novas)
+
+A cópia viva é o repo standalone `Opresida/nortoken` (deploy Vercel) e já opera on-chain na **Base Sepolia** (Privy). Regras que passam a valer:
+
+- **Token e pool são passos separados.** O lançamento (`createToken`) **nunca** cria a pool junto. Pool + lock + renúncia são o **passo 2** no Dashboard. Nunca reacoplar (o lançamento quebra). O lock de LP só existe depois da pool.
+- **Lock = compromisso aplicado no passo 2.** Na UI, o toggle do Selo de Confiança é "Compromisso de lock — aplicado ao criar a pool", não "trava no lançamento".
+- **Taxa condicional 0,3%:** token sem liquidez travada nasce com fee-on-transfer (capado 5%, honeypot-free); travar a liquidez ao criar a pool **zera** a taxa. Comunicar isso honestamente.
+- **Verificação na BaseScan é automática e server-side.** Nunca afirmar "verificado" sem o status real (`Token.verificationStatus`). Chave só no servidor (`ETHERSCAN_API_KEY`); nunca no bundle do cliente.
+- **`.env` é gitignored** e a env de prod vive no painel da **Vercel** (não mais Render).
+
+---
+
 ## 🎯 Princípios de produto não-negociáveis
 
 ### 1. Self-custody sempre
