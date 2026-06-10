@@ -4,6 +4,25 @@ Visão consolidada do projeto. Atualizado a cada feature aprovada.
 
 ---
 
+## 🟢 Estado atual (2026-06-10)
+
+**A cópia viva é o repo standalone `Opresida/nortoken` (`app/` + `contracts/`), deployado na Vercel** — não mais só o sandbox do monorepo. O projeto saiu do mock e **opera on-chain de verdade na Base Sepolia** (carteira Privy, `VITE_WALLET_MODE=testnet`).
+
+**Já funciona on-chain (testnet):**
+- Contratos v4 deployados: `NortokenFactory`, `MalleableLiquidityLock`, `MazariSwapHookV3`, `NortokenERC20`, `NortokenSwapRouter`, `NortokenDisperse` (endereços em `src/onchain/deployments.ts`).
+- **Fluxo de 2 passos separado:** Passo 1 `createToken` (token sozinho, sem pool) → Passo 2 `createPoolAndLock` no Dashboard (pool V4 + lock de liquidez com keeper Mazari + taxa do cliente). Renúncia de ownership só no passo 2.
+- **Taxa condicional 0,3%** (fee-on-transfer capado em 5%, honeypot-free) que **zera ao travar a liquidez** na criação da pool (`disableTax` via factory).
+- **Verificação automática do source na BaseScan** (Etherscan V2, `/api/verify-token` server-side) com badge de status no Dashboard.
+- Distribuição opcional do supply (`NortokenDisperse`) e compra/venda real no Marketplace (`NortokenSwapRouter` + `StateView`).
+
+**Entregue em 2026-06-10:**
+1. **Desacoplamento lock × pool** — antes o lançamento tentava criar a pool junto (dava erro); agora o token lança sozinho e a pool/lock é o passo 2 explícito no Dashboard. Copy honesta (lock é "aplicado ao criar a pool").
+2. **Verificação automática na BaseScan** — antes os tokens nasciam não-verificados e a UI afirmava falsamente "verificado"; agora a submissão é real e o badge reflete o status verdadeiro.
+
+> A regra antiga "tudo é sandbox, nunca on-chain antes da Fase 6" está **superada**: o on-chain real está ativo em **testnet**. Mainnet ainda não.
+
+---
+
 ## 🎯 O que é
 
 NORTOKEN é a **rampa de lançamento Web3 da MAZARI CORP** com foco em bioeconomia amazônica. Plataforma multi-camada:
@@ -14,9 +33,9 @@ NORTOKEN é a **rampa de lançamento Web3 da MAZARI CORP** com foco em bioeconom
 4. **Pacote Enterprise** em 5 etapas (US$ 53.340 total) vendido via consultoria
 5. **Seção promocional** dentro do site MAZARI CORP linkando pra cá
 
-**Domínio de produção:** `nortoken.mazaricorp.com` *(a configurar — DNS CNAME apontando pro Render)*
-**Path do projeto:** `mazari-corp/artifacts/nortoken/`
-**Workspace package:** `@workspace/nortoken`
+**Domínio de produção:** `nortoken.mazaricorp.com` *(a configurar — DNS apontando pra Vercel)*
+**Repositório vivo:** `Opresida/nortoken` (standalone, deploy Vercel) — pasta `app/`
+**Cópia antiga (sem commit):** `mazari-corp/artifacts/nortoken/` — não é a que está no ar
 
 ---
 
@@ -159,6 +178,10 @@ Lista completa e priorizada em [TODO.md](./TODO.md). Resumo macro:
 - ✅ Pitch híbrido: bioeconomia amazônica + 5 etapas Enterprise como upsell
 - ✅ Whitelabel multi-tenant em `nortoken.mazaricorp.com/p/<slug>`
 - ✅ Identidade visual: petroleum/amazon-neon (NORTOKEN), com rodapé MAZARI CORP
+- ✅ **On-chain via Privy + viem na Base Sepolia** (trio v4 deployado); cópia viva = repo standalone na Vercel
+- ✅ **Token e pool são passos separados:** lança o token primeiro, cria a pool+lock depois (o lock de LP só existe após a pool no Uniswap V4)
+- ✅ **Taxa condicional 0,3%** que zera ao travar a liquidez — incentivo on-chain pró-lock, honeypot-free
+- ✅ **Verificação do source na BaseScan é automática e server-side** (chave no servidor, Standard JSON Input, API V2)
 
 ## 🤔 Decisões abertas
 

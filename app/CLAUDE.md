@@ -4,6 +4,16 @@ Pacote de contexto portátil para Claude Code. Este arquivo é carregado automat
 
 ---
 
+## 🟢 LEIA PRIMEIRO — Estado atual (2026-06-10)
+
+- **Cópia viva = ESTE repo standalone `Opresida/nortoken`** (`app/` + `contracts/`), deployado na **Vercel**. Existe uma cópia mais antiga em `mazari-corp/artifacts/nortoken` (sem commit) — **NÃO é a que está no ar**. Editar aqui.
+- **On-chain REAL ativo em testnet (Base Sepolia, 84532)** via Privy (`VITE_WALLET_MODE=testnet`). Trio v4 deployado: `NortokenFactory`, `MalleableLiquidityLock`, `MazariSwapHookV3`, `NortokenERC20`, `NortokenSwapRouter`, `NortokenDisperse` (endereços em `src/onchain/deployments.ts`).
+- **Token e pool são passos SEPARADOS:** passo 1 `createToken` (token sozinho) → passo 2 `createPoolAndLock` no Dashboard (pool + lock + renúncia). O lock de LP só existe depois da pool — não dá pra "travar no lançamento".
+- **Taxa condicional 0,3%** (capada em 5%, honeypot-free) que **zera ao travar a liquidez** na criação da pool.
+- **Verificação do source na BaseScan é automática** (`/api/verify-token`, server-side, Etherscan V2, Standard JSON Input em `api/_verify/`). Chave: `ETHERSCAN_API_KEY`/`BASESCAN_API_KEY`.
+
+---
+
 ## 👤 Quem é o usuário
 
 **Humberto** (humbertodeassuncao@gmail.com) — fundador da MAZARI CORP. Product/strategy do NORTOKEN. Plano Claude Max. Usa **Antigravity IDE** no Windows.
@@ -69,19 +79,17 @@ O whitelabel usa **CSS custom properties** injetadas pelo `WhitelabelLayout` bas
 
 ## 🚀 Como rodar localmente
 
-⚠️ Projeto vive dentro do monorepo `mazari-corp`. Sempre rodar da raiz.
+**Cópia viva (standalone, a que está no ar):**
 
 ```bash
-# Setup (uma vez)
-cd /c/Users/user/mazari-corp
-pnpm install
-
-# Subir só o nortoken
-pnpm --filter @workspace/nortoken dev
-# → http://localhost:3000
+cd /c/Users/user/nortoken/app
+pnpm install   # (1ª vez)
+pnpm dev       # tsx server.ts → http://localhost:3000
 ```
 
-Server sobe em `http://localhost:3000` (Express + Vite middleware). **Não abrir Simple Browser** — apenas avisar a URL ao Humberto.
+Server Express serve o Vite (dev) + as rotas `/api/copilot` e `/api/verify-token`. **Não abrir Simple Browser** — apenas avisar a URL ao Humberto (usa Antigravity).
+
+> A cópia antiga no monorepo roda com `pnpm --filter @workspace/nortoken dev` a partir de `/c/Users/user/mazari-corp` — mas ela está defasada; preferir a viva acima.
 
 ### Subir junto com o site MAZARI
 
@@ -154,22 +162,23 @@ artifacts/nortoken/
 - ❌ **Nunca** `npm install` neste projeto (preinstall hook bloqueia + cria conflito de lockfile)
 - ❌ **Nunca** hardcodar cores no whitelabel — usar `var(--wl-*)`
 - ❌ **Nunca** custodiar fundos do cliente
-- ❌ **Nunca** prometer deploy on-chain real antes da Fase 6 (hoje é tudo sandbox)
-- ❌ **Nunca** commitar `.env` ou secrets — usar Render Secrets em prod
+- ❌ **Nunca** prometer **mainnet** real antes de auditoria — on-chain hoje é **testnet (Base Sepolia)**; sempre deixar claro que é testnet
+- ❌ **Nunca** commitar `.env` ou secrets — usar env da Vercel em prod (`.env` é gitignored)
+- ❌ **Nunca** reacoplar pool/lock ao lançamento — token lança sozinho, pool é o passo 2 (lock de LP só existe depois da pool)
 - ❌ **Nunca** abrir Simple Browser / browser embutido — apenas informar URL
 - ❌ **Nunca** quebrar `pnpm typecheck` — válido em todos os 5 workspaces
 - ❌ **Nunca** instalar dep fora do `catalog:` se ela já existe no `pnpm-workspace.yaml`
 
 ---
 
-## 🗺️ Estado atual do projeto (snapshot 2026-05-21)
+## 🗺️ Estado atual do projeto (snapshot 2026-06-10)
 
 ### ✅ Pronto
-- **Fase 0:** Migração pro monorepo, setup TypeScript + Vite + Tailwind 4
-- **Fase 1:** Pacote Enterprise (5 etapas, US$ 53.340) no PremiumStore com timeline visual
-- **Fase 2:** Seção `<Nortoken />` integrada na Home do site MAZARI CORP
-- **Fase 2.5:** Plataforma Whitelabel demo com **9 páginas funcionais** (Home, Whitepaper, Swap, Stake, Referral, Tokenization, Buy, Roadmap, Lending) — paleta NORTOKEN, sidebar responsiva, CSS vars preparadas pra multi-tenancy
-- **Fase 2.6:** Documentação completa (README, CONTEXT, PROJECT_CONTEXT, ARCHITECTURE, TODO, CLAUDE)
+- **Fases 0–2.6:** monorepo→standalone, Enterprise (5 etapas, US$ 53.340), seção no site MAZARI, Whitelabel demo (9 páginas), documentação.
+- **Fase 6 (on-chain, testnet):** carteira Privy real + deploy on-chain na Base Sepolia. Token musculoso + hook V4 + lock maleável + factory + router + disperse deployados.
+- **Lock × pool desacoplado (2026-06-10):** token lança sozinho; pool+lock são o passo 2 no Dashboard ("Criar pool agora"); UI clara de "pool pendente".
+- **Verificação automática na BaseScan (2026-06-10):** `/api/verify-token` submete o source (Etherscan V2) pós-deploy; badge "Verificando… → Source verificado". Removidas as afirmações falsas de "verificado".
+- **Taxa condicional 0,3%** que zera ao travar a liquidez.
 
 ### ❌ Pendente pra pleno funcionamento
 - **Fase 3:** Backend Neon Postgres + Drizzle + Auth real (3-4 dias)
@@ -199,6 +208,10 @@ artifacts/nortoken/
 - ✅ Whitelabel multi-tenant em `nortoken.mazaricorp.com/p/<slug>` (path-based primeiro, subdomain wildcard depois)
 - ✅ Tab-based router (sem React Router por enquanto, except quando precisarmos pra `/p/<slug>` na Fase 7)
 - ✅ Identidade: petroleum/amazon-neon (Nortoken), rodapé MAZARI CORP
+- ✅ On-chain via Privy + viem na Base Sepolia (testnet); cópia viva = repo standalone na Vercel
+- ✅ Token e pool são passos separados (lock de LP só existe depois da pool)
+- ✅ Taxa condicional 0,3% que zera ao travar a liquidez (incentivo pró-lock)
+- ✅ Verificação do source na BaseScan automática e server-side (Etherscan V2 + Standard JSON Input)
 
 ---
 

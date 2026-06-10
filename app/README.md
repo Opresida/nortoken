@@ -5,9 +5,26 @@
   <em>Plataforma exclusiva do grupo MAZARI CORP.</em>
 </p>
 
-**Workspace:** `@workspace/nortoken` (dentro do monorepo `mazari-corp`)
+**Repositório vivo:** `Opresida/nortoken` (standalone, `app/` + `contracts/`) — **deployado na Vercel**
 **Domínio de produção:** `https://nortoken.mazaricorp.com` *(a configurar — multi-tenant via `/p/<slug>`)*
 **Ambiente de dev:** `http://localhost:3000`
+
+> ⚠️ Existe uma cópia mais antiga em `mazari-corp/artifacts/nortoken` (sem commit). **A cópia viva/deployada é ESTE repo** (`/c/Users/user/nortoken/app`). Editar aqui.
+
+---
+
+## 🟢 Estado atual (2026-06-10) — On-chain REAL em testnet
+
+O projeto **passou do sandbox**: já faz deploy on-chain de verdade na **Base Sepolia** (84532) via carteira **Privy** (`VITE_WALLET_MODE=testnet`).
+
+- **Contratos v4 deployados** (endereços em [`src/onchain/deployments.ts`](src/onchain/deployments.ts)): `NortokenFactory`, `MalleableLiquidityLock`, `MazariSwapHookV3`, `NortokenERC20`, `NortokenSwapRouter`, `NortokenDisperse`.
+- **Fluxo de 2 passos (separado):** **Passo 1** `createToken` — o token nasce sozinho (sem pool); **Passo 2** `createPoolAndLock` no Dashboard ("Criar pool agora") — inicializa a pool V4, **trava a liquidez** (keeper Mazari) e ativa a taxa do cliente. Renúncia de ownership só no passo 2.
+- **Taxa condicional 0,3%:** token sem liquidez travada nasce com fee-on-transfer pequeno (capado em 5%, honeypot-free); **travar a liquidez ao criar a pool zera a taxa** (`disableTax` via factory).
+- **Verificação automática na BaseScan:** todo token lançado é submetido ao verificador da Etherscan V2 (`/api/verify-token`, server-side, Standard JSON Input) — badge *"Verificando… → Source verificado"*.
+- **Distribuição opcional** do supply no lançamento via `NortokenDisperse`; **compra/venda** real no Marketplace via `NortokenSwapRouter`.
+- **Deploy:** Vercel (`api/copilot.js` + `api/verify-token.js` como funções serverless; `server.ts` espelha as rotas no dev local).
+
+Detalhes em [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md) e [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
@@ -145,9 +162,9 @@ Detalhes completos em [TODO.md](./TODO.md).
 | **3** | Backend real (Neon Postgres + Drizzle) + auth | ❌ Pendente |
 | **4** | Painel admin com CRUD de valores e clientes | ❌ Pendente |
 | **5** | Pagamento on-chain em USDC (self-custody, sem fiat/PIX) | ❌ Pendente |
-| **6** | Wallet Web3 real (Privy/WalletConnect) + deploy on-chain | ❌ Pendente |
+| **6** | Wallet Web3 real (Privy) + deploy on-chain (Base Sepolia) + lock/pool + verificação BaseScan | 🟢 Ativo em testnet |
 | **7** | Configurador de Whitelabel multi-tenant + rota dinâmica `/p/<slug>` | ❌ Pendente |
-| **8** | Deploy produção Render + DNS `nortoken.mazaricorp.com` | ❌ Pendente |
+| **8** | Deploy produção (Vercel) + DNS `nortoken.mazaricorp.com` | 🟡 Parcial (Vercel no ar; DNS pendente) |
 
 ---
 

@@ -4,6 +4,46 @@ Estrutura de pastas, fluxo de dados e decisões arquiteturais.
 
 ---
 
+## ⛓️ Arquitetura on-chain (2026-06-10) — Base Sepolia
+
+A cópia viva é o repo standalone `Opresida/nortoken` (`app/` frontend+server, `contracts/` Foundry), deployado na **Vercel**. Carteira via **Privy**; rede **Base Sepolia (84532)** quando `VITE_WALLET_MODE=testnet`.
+
+### Contratos (trio v4 + extras)
+Endereços vivos em [`src/onchain/deployments.ts`](src/onchain/deployments.ts). ABIs em [`src/onchain/abis.ts`](src/onchain/abis.ts).
+
+| Contrato | Papel |
+|---|---|
+| `NortokenFactory` | Linha de montagem em 2 passos: `createToken` e `createPoolAndLock`. Injeta a taxa condicional + tesouro no deploy do token. |
+| `NortokenERC20` | Token "musculoso" (OZ v5: Burnable, Permit, Ownable2Step, Pausable + LaunchProtection). Taxa condicional que zera ao travar a liquidez (`disableTax`). |
+| `MalleableLiquidityLock` | Lock maleável: principal travado (anti-rug) + range ajustável por keeper restrito (Mazari) que nunca saca. |
+| `MazariSwapHookV3` | Hook V4: fee de protocolo 0,2% + taxa do projeto, captados no swap. |
+| `NortokenSwapRouter` | Compra/venda exact-input nas pools (Marketplace). |
+| `NortokenDisperse` | Distribuição opcional do supply pras carteiras do tokenomics no lançamento. |
+
+### Fluxo de lançamento (2 passos, SEPARADOS)
+
+```
+Passo 1 — TokenCreator.startRealDeploy()
+  └─ factory.createToken(InitParams)            → token nasce (cliente=owner), SEM pool
+     (+ NortokenDisperse opcional)
+     (+ /api/verify-token em background → verifica source na BaseScan)
+
+   ...token fica no Dashboard como "pool pendente"...
+
+Passo 2 — Dashboard.handleCreatePool()  ("Criar pool agora")
+  └─ token.setExempt(lock) → token.approve(lock) → factory.createPoolAndLock(...)
+     → inicializa pool V4 + trava liquidez (keeper Mazari) + taxa do cliente
+     → (opcional) token.renounceOwnership()  [sempre por ÚLTIMO]
+```
+
+> **Por que separado:** liquidez travada no Uniswap V4 é uma posição de LP — só existe **depois** da pool. Não dá pra "travar no lançamento"; o lock se efetiva no passo 2. (Antes o passo 2 era forçado dentro do lançamento e quebrava — corrigido em 2026-06-10.)
+
+### Verificação automática do source (BaseScan)
+- **Frontend** ([`src/onchain/verify.ts`](src/onchain/verify.ts)): pós-deploy, lê `taxBps`/`taxTreasury` injetados pela factory, ABI-encoda a tupla `InitParams` (args de construtor exatos) e chama `/api/verify-token`. Atualiza `Token.verificationStatus` (`pending`→`verified`/`failed`).
+- **Backend** ([`api/verify-token.js`](api/verify-token.js) na Vercel + rota espelho em [`server.ts`](server.ts) no dev): submete o **Standard JSON Input** ([`api/_verify/NortokenERC20.standard.json`](api/_verify/NortokenERC20.standard.json), gerado pelo Foundry — compiler `v0.8.26+commit.8a97fa7a`, optimizer 200, cancun) à **API V2 unificada da Etherscan** (`verifysourcecode` + polling `checkverifystatus`). Chave server-side `ETHERSCAN_API_KEY`/`BASESCAN_API_KEY`.
+
+---
+
 ## 🧭 Visão geral
 
 ```
